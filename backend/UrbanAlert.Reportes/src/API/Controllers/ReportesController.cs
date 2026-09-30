@@ -29,7 +29,7 @@ public class ReportesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult ObtenerReportes()
     {
-        return Ok();
+        return Ok("Hello World!");
     }
     
     [HttpGet("{id:guid}")]
