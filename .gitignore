@@ -427,3 +427,15 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# .NET
+bin/
+obj/
+
+# User-specific
+*.user
+*.suo
