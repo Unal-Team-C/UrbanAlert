@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: urbanalert-reportes-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: urbanalert_reportes
+      POSTGRES_USER: urbanalert
+      POSTGRES_PASSWORD: urbanalert
+    ports:
+      - "5432:5432"
+    volumes:
+      - urbanalert-reportes-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  urbanalert-reportes-postgres-data:

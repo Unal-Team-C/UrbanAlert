@@ -1,6 +1,23 @@
+using Application.Interfaces.ActualizarEstadoReporte;
+using Application.Interfaces.ActualizarNivelEmergenciaReporte;
+using Application.Interfaces.AsignarResponsableReporte;
+using Application.Interfaces.CrearReporte;
+using Application.Interfaces.EliminarReporte;
+using Application.Interfaces.ObtenerReportePorId;
+using Application.Interfaces.ObtenerReportes;
+using Application.Interfaces.RechazarReporte;
+using Application.Reportes.ActualizarEstadoReporte;
+using Application.Reportes.ActualizarNivelEmergenciaReporte;
+using Application.Reportes.AsignarResponsableReporte;
+using Application.Reportes.CrearReporte;
+using Application.Reportes.EliminarReporte;
+using Application.Reportes.ObtenerReportePorId;
+using Application.Reportes.RechazarReporte;
+using Domain.Reportes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using API.DTOs.Reportes;
+using Application.Reportes;
 
 namespace API.Controllers;
 
@@ -8,6 +25,35 @@ namespace API.Controllers;
 [Route("api/v1/[controller]")]
 public class ReportesController : ControllerBase
 {
+    private readonly ICrearReporteHandler _crearReporteHandler;
+    private readonly IObtenerReportesHandler _obtenerReportesHandler;
+    private readonly IObtenerReportePorIdHandler _obtenerReportePorIdHandler;
+    private readonly IActualizarEstadoReporteHandler _actualizarEstadoReporteHandler;
+    private readonly IActualizarNivelEmergenciaReporteHandler _actualizarNivelEmergenciaReporteHandler;
+    private readonly IAsignarResponsableReporteHandler _asignarResponsableReporteHandler;
+    private readonly IRechazarReporteHandler _rechazarReporteHandler;
+    private readonly IEliminarReporteHandler _eliminarReporteHandler;
+
+    public ReportesController(
+        ICrearReporteHandler crearReporteHandler,
+        IObtenerReportesHandler obtenerReportesHandler,
+        IObtenerReportePorIdHandler obtenerReportePorIdHandler,
+        IActualizarEstadoReporteHandler actualizarEstadoReporteHandler,
+        IActualizarNivelEmergenciaReporteHandler actualizarNivelEmergenciaReporteHandler,
+        IAsignarResponsableReporteHandler asignarResponsableReporteHandler,
+        IRechazarReporteHandler rechazarReporteHandler,
+        IEliminarReporteHandler eliminarReporteHandler)
+    {
+        _crearReporteHandler = crearReporteHandler;
+        _obtenerReportesHandler = obtenerReportesHandler;
+        _obtenerReportePorIdHandler = obtenerReportePorIdHandler;
+        _actualizarEstadoReporteHandler = actualizarEstadoReporteHandler;
+        _actualizarNivelEmergenciaReporteHandler = actualizarNivelEmergenciaReporteHandler;
+        _asignarResponsableReporteHandler = asignarResponsableReporteHandler;
+        _rechazarReporteHandler = rechazarReporteHandler;
+        _eliminarReporteHandler = eliminarReporteHandler;
+    }
+
     [HttpPost]
     [EndpointSummary("Crear un reporte")]
     [EndpointDescription("""
@@ -24,10 +70,18 @@ public class ReportesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public IActionResult CrearReporte(
-        [FromBody] CrearReporteRequest request)
+    public async Task<IActionResult> CrearReporte(
+        [FromBody] CrearReporteRequest request,
+        CancellationToken cancellationToken)
     {
-        var idReporte = Guid.NewGuid();
+        CrearReporteCommand command = new CrearReporteCommand(
+            request.TipoDano,
+            request.Descripcion,
+            request.IdCoordenada,
+            request.UrlImagen,
+            request.IdUsuario);
+
+        Guid idReporte = await _crearReporteHandler.Handle(command, cancellationToken);
 
         return Created(
             $"/api/v1/Reportes/{idReporte}",
@@ -47,9 +101,11 @@ public class ReportesController : ControllerBase
         descripción, fecha, coordenadas, imagen, usuario y estado.
         """)]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public IActionResult ObtenerReportes()
+    public async Task<IActionResult> ObtenerReportes(CancellationToken cancellationToken)
     {
-        return Ok();
+        IReadOnlyList<ReporteDto> reportes = await _obtenerReportesHandler.Handle(cancellationToken);
+
+        return Ok(reportes);
     }
 
     [HttpGet("{id:guid}")]
@@ -62,10 +118,13 @@ public class ReportesController : ControllerBase
         """)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult ObtenerReporte(
-        Guid id)
+    public async Task<IActionResult> ObtenerReporte(
+        Guid id,
+        CancellationToken cancellationToken)
     {
-        return Ok();
+        ReporteDto? reporte = await _obtenerReportePorIdHandler.Handle(new ObtenerReportePorIdQuery(id), cancellationToken);
+
+        return reporte is null ? NotFound() : Ok(reporte);
     }
 
     [HttpPatch("{id:guid}/estado")]
@@ -79,11 +138,20 @@ public class ReportesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult ActualizarEstado(
+    public async Task<IActionResult> ActualizarEstado(
         Guid id,
-        [FromBody] ActualizarEstadoRequest request)
+        [FromBody] ActualizarEstadoRequest request,
+        CancellationToken cancellationToken)
     {
-        return Ok();
+        if (!Enum.TryParse<EstadoReporte>(request.Estado, ignoreCase: true, out EstadoReporte nuevoEstado))
+        {
+            return BadRequest(new { message = "El estado indicado no es válido." });
+        }
+
+        bool actualizado = await _actualizarEstadoReporteHandler.Handle(
+            new ActualizarEstadoReporteCommand(id, nuevoEstado), cancellationToken);
+
+        return actualizado ? Ok() : NotFound();
     }
 
     [HttpPatch("{id:guid}/nivel-emergencia")]
@@ -99,11 +167,20 @@ public class ReportesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult ActualizarNivelEmergencia(
+    public async Task<IActionResult> ActualizarNivelEmergencia(
         Guid id,
-        [FromBody] ActualizarNivelEmergenciaRequest request)
+        [FromBody] ActualizarNivelEmergenciaRequest request,
+        CancellationToken cancellationToken)
     {
-        return Ok();
+        if (!Enum.IsDefined(typeof(NivelEmergencia), request.NivelEmergencia))
+        {
+            return BadRequest(new { message = "El nivel de emergencia indicado no es válido." });
+        }
+
+        bool actualizado = await _actualizarNivelEmergenciaReporteHandler.Handle(
+            new ActualizarNivelEmergenciaReporteCommand(id, (NivelEmergencia)request.NivelEmergencia), cancellationToken);
+
+        return actualizado ? Ok() : NotFound();
     }
 
     [HttpPatch("{id:guid}/asignacion")]
@@ -119,11 +196,15 @@ public class ReportesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult AsignarResponsable(
+    public async Task<IActionResult> AsignarResponsable(
         Guid id,
-        [FromBody] AsignarResponsableRequest request)
+        [FromBody] AsignarResponsableRequest request,
+        CancellationToken cancellationToken)
     {
-        return Ok();
+        bool asignado = await _asignarResponsableReporteHandler.Handle(
+            new AsignarResponsableReporteCommand(id, request.IdResponsable), cancellationToken);
+
+        return asignado ? Ok() : NotFound();
     }
 
     [HttpPut("{id:guid}/rechazo")]
@@ -139,27 +220,33 @@ public class ReportesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult RechazarReporte(
+    public async Task<IActionResult> RechazarReporte(
         Guid id,
-        [FromBody] RechazarReporteRequest request)
+        [FromBody] RechazarReporteRequest request,
+        CancellationToken cancellationToken)
     {
-        return Ok();
+        bool rechazado = await _rechazarReporteHandler.Handle(
+            new RechazarReporteCommand(id, request.Motivo), cancellationToken);
+
+        return rechazado ? Ok() : NotFound();
     }
-    
+
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = "Administrador")]
     [EndpointSummary("Eliminar un reporte")]
     [EndpointDescription("""
         Elimina un reporte utilizando su identificador único.
-    
+
         Esta operación requiere permisos de Administrador.
         El reporte debe existir para poder ser eliminado.
         """)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult EliminarReporte(Guid id)
+    public async Task<IActionResult> EliminarReporte(Guid id, CancellationToken cancellationToken)
     {
-        return NoContent();
+        bool eliminado = await _eliminarReporteHandler.Handle(new EliminarReporteCommand(id), cancellationToken);
+
+        return eliminado ? NoContent() : NotFound();
     }
 }

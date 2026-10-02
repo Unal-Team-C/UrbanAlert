@@ -1,8 +1,9 @@
 namespace API.DTOs.Reportes;
 
-public record CrearReporteRequest(string TipoDano,
+public record CrearReporteRequest(
+    string TipoDano,
     string Descripcion,
     Guid IdCoordenada,
     string UrlImagen,
-    Guid IdUsuario,
-    int? NivelEmergencia);  
+    Guid IdUsuario);
+
