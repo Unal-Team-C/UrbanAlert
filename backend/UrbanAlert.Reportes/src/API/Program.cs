@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using API.Authentication;
 using API.Middleware;
 using Application;
 using Infrastructure;
 using Infrastructure.Persistencia;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
@@ -14,7 +16,20 @@ builder.Services.AddControllers()
 builder.Services.AddOpenApi();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+
+if (builder.Environment.IsDevelopment())
+{
+    // Autenticación simplificada mientras se define el proveedor de identidad real;
+    // autentica toda petición como un usuario Administrador fijo.
+    builder.Services.AddAuthentication(DefaultUserAuthenticationHandler.SchemeName)
+        .AddScheme<AuthenticationSchemeOptions, DefaultUserAuthenticationHandler>(
+            DefaultUserAuthenticationHandler.SchemeName, options => { });
+}
+else
+{
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+}
+
 builder.Services.AddAuthorization();
 
 WebApplication app = builder.Build();
