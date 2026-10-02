@@ -1,8 +1,9 @@
 using Application.Reportes;
+using Application.Reportes.ObtenerReportes;
 
 namespace Application.Interfaces.ObtenerReportes;
 
 public interface IObtenerReportesHandler
 {
-    Task<IReadOnlyList<ReporteDto>> Handle(CancellationToken cancellationToken);
+    Task<PaginaDto<ReporteDto>> Handle(ObtenerReportesQuery query, CancellationToken cancellationToken);
 }

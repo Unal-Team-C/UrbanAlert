@@ -4,6 +4,5 @@ public record CrearReporteCommand(
     string TipoDano,
     string Descripcion,
     Guid IdCoordenada,
-    string UrlImagen,
-    Guid IdUsuario
+    string UrlImagen
 );

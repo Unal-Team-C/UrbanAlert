@@ -2,6 +2,11 @@ namespace Domain.Reportes;
 
 public class Reporte
 {
+    public const int TipoDanoMaxLength = 200;
+    public const int DescripcionMaxLength = 2000;
+    public const int UrlImagenMaxLength = 2000;
+    public const int MotivoRechazoMaxLength = 2000;
+
     private static readonly Dictionary<EstadoReporte, EstadoReporte> SiguienteEstado = new()
     {
         [EstadoReporte.Reportado] = EstadoReporte.Verificado,
@@ -33,14 +38,26 @@ public class Reporte
         if (string.IsNullOrWhiteSpace(tipoDano))
             throw new ArgumentException("El tipo de daño es obligatorio.", nameof(tipoDano));
 
+        if (tipoDano.Length > TipoDanoMaxLength)
+            throw new ArgumentException($"El tipo de daño no puede superar {TipoDanoMaxLength} caracteres.", nameof(tipoDano));
+
         if (string.IsNullOrWhiteSpace(descripcion))
             throw new ArgumentException("La descripción es obligatoria.", nameof(descripcion));
+
+        if (descripcion.Length > DescripcionMaxLength)
+            throw new ArgumentException($"La descripción no puede superar {DescripcionMaxLength} caracteres.", nameof(descripcion));
 
         if (idCoordenada == Guid.Empty)
             throw new ArgumentException("El identificador de la coordenada es obligatorio.", nameof(idCoordenada));
 
         if (string.IsNullOrWhiteSpace(urlImagen))
             throw new ArgumentException("La URL de la imagen es obligatoria.", nameof(urlImagen));
+
+        if (urlImagen.Length > UrlImagenMaxLength)
+            throw new ArgumentException($"La URL de la imagen no puede superar {UrlImagenMaxLength} caracteres.", nameof(urlImagen));
+
+        if (!Uri.TryCreate(urlImagen, UriKind.Absolute, out _))
+            throw new ArgumentException("La URL de la imagen no es una URL absoluta válida.", nameof(urlImagen));
 
         if (idUsuario == Guid.Empty)
             throw new ArgumentException("El identificador del usuario es obligatorio.", nameof(idUsuario));
@@ -81,6 +98,9 @@ public class Reporte
     {
         if (string.IsNullOrWhiteSpace(motivo))
             throw new ArgumentException("El motivo de rechazo es obligatorio.", nameof(motivo));
+
+        if (motivo.Length > MotivoRechazoMaxLength)
+            throw new ArgumentException($"El motivo de rechazo no puede superar {MotivoRechazoMaxLength} caracteres.", nameof(motivo));
 
         if (Estado is EstadoReporte.Resuelto or EstadoReporte.Rechazado)
             throw new TransicionEstadoInvalidaException(Estado, EstadoReporte.Rechazado);

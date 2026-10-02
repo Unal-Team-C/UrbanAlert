@@ -12,9 +12,9 @@ using Application.Reportes.AsignarResponsableReporte;
 using Application.Reportes.CrearReporte;
 using Application.Reportes.EliminarReporte;
 using Application.Reportes.ObtenerReportePorId;
+using Application.Reportes.ObtenerReportes;
 using Application.Reportes.RechazarReporte;
 using Domain.Reportes;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using API.DTOs.Reportes;
 using Application.Reportes;
@@ -60,11 +60,11 @@ public class ReportesController : ControllerBase
         Crea un nuevo reporte de daño urbano.
 
         El cliente debe proporcionar el tipo de daño, descripción,
-        identificador de la coordenada, URL de la imagen e
-        identificador del usuario.
+        identificador de la coordenada y URL de la imagen.
 
-        La fecha de creación, el identificador del reporte y el
-        nivel de emergencia inicial son establecidos internamente
+        La fecha de creación, el identificador del reporte, el
+        nivel de emergencia inicial y el usuario (genérico mientras
+        no exista autenticación) son establecidos internamente
         por el servicio.
         """)]
     [ProducesResponseType(StatusCodes.Status201Created)]
@@ -78,8 +78,7 @@ public class ReportesController : ControllerBase
             request.TipoDano,
             request.Descripcion,
             request.IdCoordenada,
-            request.UrlImagen,
-            request.IdUsuario);
+            request.UrlImagen);
 
         Guid idReporte = await _crearReporteHandler.Handle(command, cancellationToken);
 
@@ -93,17 +92,32 @@ public class ReportesController : ControllerBase
     }
 
     [HttpGet]
-    [EndpointSummary("Obtener todos los reportes")]
+    [EndpointSummary("Obtener reportes")]
     [EndpointDescription("""
-        Obtiene la colección de reportes registrados en el sistema.
+        Obtiene una página de reportes registrados en el sistema.
 
-        Cada reporte contiene información sobre el tipo de daño,
-        descripción, fecha, coordenadas, imagen, usuario y estado.
+        Permite filtrar opcionalmente por estado y nivel de emergencia.
+        El tamaño de página está limitado a un máximo de 100 elementos.
         """)]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> ObtenerReportes(CancellationToken cancellationToken)
+    public async Task<IActionResult> ObtenerReportes(
+        [FromQuery] EstadoReporte? estado,
+        [FromQuery] NivelEmergencia? nivelEmergencia,
+        [FromQuery] int pagina,
+        [FromQuery] int tamanoPagina,
+        CancellationToken cancellationToken)
     {
-        IReadOnlyList<ReporteDto> reportes = await _obtenerReportesHandler.Handle(cancellationToken);
+        int paginaNormalizada = pagina < 1 ? 1 : pagina;
+        int tamanoPaginaNormalizado = tamanoPagina switch
+        {
+            < 1 => 20,
+            > 100 => 100,
+            _ => tamanoPagina
+        };
+
+        PaginaDto<ReporteDto> reportes = await _obtenerReportesHandler.Handle(
+            new ObtenerReportesQuery(estado, nivelEmergencia, paginaNormalizada, tamanoPaginaNormalizado),
+            cancellationToken);
 
         return Ok(reportes);
     }
@@ -155,17 +169,14 @@ public class ReportesController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/nivel-emergencia")]
-    [Authorize(Roles = "Administrador")]
     [EndpointSummary("Actualizar el nivel de emergencia")]
     [EndpointDescription("""
         Actualiza el nivel de emergencia asignado a un reporte.
 
-        Esta operación requiere permisos de Administrador.
         El reporte debe existir y el nivel de emergencia debe ser válido.
         """)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ActualizarNivelEmergencia(
         Guid id,
@@ -184,17 +195,14 @@ public class ReportesController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/asignacion")]
-    [Authorize(Roles = "Administrador")]
     [EndpointSummary("Asignar responsable a un reporte")]
     [EndpointDescription("""
         Asigna un usuario responsable a un reporte.
 
-        Esta operación requiere permisos de Administrador.
         El responsable debe corresponder a un usuario válido
         dentro del sistema.
         """)]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AsignarResponsable(
         Guid id,
@@ -208,17 +216,14 @@ public class ReportesController : ControllerBase
     }
 
     [HttpPut("{id:guid}/rechazo")]
-    [Authorize(Roles = "Administrador")]
     [EndpointSummary("Rechazar un reporte")]
     [EndpointDescription("""
         Rechaza un reporte y registra el motivo del rechazo.
 
-        Esta operación requiere permisos de Administrador.
         El motivo del rechazo es obligatorio.
         """)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RechazarReporte(
         Guid id,
@@ -232,16 +237,13 @@ public class ReportesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Administrador")]
     [EndpointSummary("Eliminar un reporte")]
     [EndpointDescription("""
         Elimina un reporte utilizando su identificador único.
 
-        Esta operación requiere permisos de Administrador.
         El reporte debe existir para poder ser eliminado.
         """)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> EliminarReporte(Guid id, CancellationToken cancellationToken)
     {

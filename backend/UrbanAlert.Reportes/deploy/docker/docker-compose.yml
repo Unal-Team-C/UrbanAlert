@@ -12,5 +12,19 @@ services:
     volumes:
       - urbanalert-reportes-postgres-data:/var/lib/postgresql/data
 
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: urbanalert-reportes-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: urbanalert
+      RABBITMQ_DEFAULT_PASS: urbanalert
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - urbanalert-reportes-rabbitmq-data:/var/lib/rabbitmq
+
 volumes:
   urbanalert-reportes-postgres-data:
+  urbanalert-reportes-rabbitmq-data:

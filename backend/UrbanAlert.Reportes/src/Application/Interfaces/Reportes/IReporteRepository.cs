@@ -8,7 +8,12 @@ public interface IReporteRepository
 
     Task<Reporte?> ObtenerPorIdAsync(Guid id, CancellationToken cancellationToken);
 
-    Task<IReadOnlyList<Reporte>> ObtenerTodosAsync(CancellationToken cancellationToken);
+    Task<(IReadOnlyList<Reporte> Elementos, int Total)> ObtenerPaginadoAsync(
+        EstadoReporte? estado,
+        NivelEmergencia? nivelEmergencia,
+        int pagina,
+        int tamanoPagina,
+        CancellationToken cancellationToken);
 
     Task ActualizarAsync(Reporte reporte, CancellationToken cancellationToken);
 

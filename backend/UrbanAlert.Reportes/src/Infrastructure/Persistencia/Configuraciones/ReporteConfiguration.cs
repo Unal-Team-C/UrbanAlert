@@ -15,18 +15,18 @@ public class ReporteConfiguration : IEntityTypeConfiguration<Reporte>
 
         builder.Property(reporte => reporte.TipoDano)
             .IsRequired()
-            .HasMaxLength(200);
+            .HasMaxLength(Reporte.TipoDanoMaxLength);
 
         builder.Property(reporte => reporte.Descripcion)
             .IsRequired()
-            .HasMaxLength(2000);
+            .HasMaxLength(Reporte.DescripcionMaxLength);
 
         builder.Property(reporte => reporte.IdCoordenada)
             .IsRequired();
 
         builder.Property(reporte => reporte.UrlImagen)
             .IsRequired()
-            .HasMaxLength(2000);
+            .HasMaxLength(Reporte.UrlImagenMaxLength);
 
         builder.Property(reporte => reporte.IdUsuario)
             .IsRequired();
@@ -47,6 +47,10 @@ public class ReporteConfiguration : IEntityTypeConfiguration<Reporte>
         builder.Property(reporte => reporte.IdResponsable);
 
         builder.Property(reporte => reporte.MotivoRechazo)
-            .HasMaxLength(2000);
+            .HasMaxLength(Reporte.MotivoRechazoMaxLength);
+
+        // "xmin" es la columna de sistema de Postgres que cambia en cada UPDATE;
+        // usarla como token de concurrencia no requiere migración ni columna propia.
+        builder.Property<uint>("xmin").IsRowVersion();
     }
 }

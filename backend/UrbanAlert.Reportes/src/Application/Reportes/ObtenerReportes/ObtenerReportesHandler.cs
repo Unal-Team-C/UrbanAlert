@@ -6,10 +6,15 @@ namespace Application.Reportes.ObtenerReportes;
 
 public class ObtenerReportesHandler(IReporteRepository reporteRepository) : IObtenerReportesHandler
 {
-    public async Task<IReadOnlyList<ReporteDto>> Handle(CancellationToken cancellationToken)
+    public async Task<PaginaDto<ReporteDto>> Handle(ObtenerReportesQuery query, CancellationToken cancellationToken)
     {
-        IReadOnlyList<Reporte> reportes = await reporteRepository.ObtenerTodosAsync(cancellationToken);
+        (IReadOnlyList<Reporte> elementos, int total) = await reporteRepository.ObtenerPaginadoAsync(
+            query.Estado, query.NivelEmergencia, query.Pagina, query.TamanoPagina, cancellationToken);
 
-        return reportes.Select(ReporteDto.DesdeEntidad).ToList();
+        return new PaginaDto<ReporteDto>(
+            elementos.Select(ReporteDto.DesdeEntidad).ToList(),
+            query.Pagina,
+            query.TamanoPagina,
+            total);
     }
 }

@@ -15,11 +15,31 @@ public class ReporteRepository(ReportesDbContext dbContext) : IReporteRepository
     public Task<Reporte?> ObtenerPorIdAsync(Guid id, CancellationToken cancellationToken) =>
         dbContext.Reportes.FirstOrDefaultAsync(reporte => reporte.Id == id, cancellationToken);
 
-    public async Task<IReadOnlyList<Reporte>> ObtenerTodosAsync(CancellationToken cancellationToken) =>
-        await dbContext.Reportes
-            .AsNoTracking()
+    public async Task<(IReadOnlyList<Reporte> Elementos, int Total)> ObtenerPaginadoAsync(
+        EstadoReporte? estado,
+        NivelEmergencia? nivelEmergencia,
+        int pagina,
+        int tamanoPagina,
+        CancellationToken cancellationToken)
+    {
+        IQueryable<Reporte> consulta = dbContext.Reportes.AsNoTracking();
+
+        if (estado is not null)
+            consulta = consulta.Where(reporte => reporte.Estado == estado);
+
+        if (nivelEmergencia is not null)
+            consulta = consulta.Where(reporte => reporte.NivelEmergencia == nivelEmergencia);
+
+        int total = await consulta.CountAsync(cancellationToken);
+
+        List<Reporte> elementos = await consulta
             .OrderByDescending(reporte => reporte.Fecha)
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
             .ToListAsync(cancellationToken);
+
+        return (elementos, total);
+    }
 
     public Task ActualizarAsync(Reporte reporte, CancellationToken cancellationToken) =>
         dbContext.SaveChangesAsync(cancellationToken);

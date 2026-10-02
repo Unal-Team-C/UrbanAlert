@@ -17,8 +17,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         "Hueco en la vía",
         "Hueco grande que afecta el tránsito vehicular",
         Guid.NewGuid(),
-        "https://imagenes.urbanalert.com/foto.jpg",
-        Guid.NewGuid());
+        "https://imagenes.urbanalert.com/foto.jpg");
 
     private async Task<Guid> CrearReporteAsync()
     {
@@ -56,9 +55,37 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         HttpResponseMessage respuesta = await _client.GetAsync("/api/v1/Reportes");
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
 
-        List<ReporteRespuesta>? reportes = await respuesta.Content.ReadFromJsonAsync<List<ReporteRespuesta>>();
-        Assert.NotNull(reportes);
-        Assert.Contains(reportes!, r => r.Id == idReporte);
+        PaginaRespuesta? pagina = await respuesta.Content.ReadFromJsonAsync<PaginaRespuesta>();
+        Assert.NotNull(pagina);
+        Assert.Contains(pagina!.Elementos, r => r.Id == idReporte);
+    }
+
+    [Fact]
+    public async Task ObtenerReportes_FiltraPorEstado()
+    {
+        Guid idReporte = await CrearReporteAsync();
+
+        HttpResponseMessage respuesta = await _client.GetAsync("/api/v1/Reportes?estado=Rechazado");
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+
+        PaginaRespuesta? pagina = await respuesta.Content.ReadFromJsonAsync<PaginaRespuesta>();
+        Assert.NotNull(pagina);
+        Assert.DoesNotContain(pagina!.Elementos, r => r.Id == idReporte);
+    }
+
+    [Fact]
+    public async Task ObtenerReportes_RespetaElTamanoDePaginaSolicitado()
+    {
+        await CrearReporteAsync();
+        await CrearReporteAsync();
+
+        HttpResponseMessage respuesta = await _client.GetAsync("/api/v1/Reportes?pagina=1&tamanoPagina=1");
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+
+        PaginaRespuesta? pagina = await respuesta.Content.ReadFromJsonAsync<PaginaRespuesta>();
+        Assert.NotNull(pagina);
+        Assert.Single(pagina!.Elementos);
+        Assert.True(pagina.TotalElementos >= 2);
     }
 
     [Fact]
@@ -156,6 +183,12 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     }
 
     private record CrearReporteRespuesta(Guid IdReporte, string Message);
+
+    private record PaginaRespuesta(
+        List<ReporteRespuesta> Elementos,
+        int Pagina,
+        int TamanoPagina,
+        int TotalElementos);
 
     private record ReporteRespuesta(
         Guid Id,

@@ -41,13 +41,35 @@ public class ReporteTests
     [Fact]
     public void Constructor_LanzaExcepcion_SiIdCoordenadaEsVacio()
     {
-        Assert.Throws<ArgumentException>(() => new Reporte("tipo", "descripcion", Guid.Empty, "url", Guid.NewGuid()));
+        Assert.Throws<ArgumentException>(() => new Reporte("tipo", "descripcion", Guid.Empty, "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
     }
 
     [Fact]
     public void Constructor_LanzaExcepcion_SiIdUsuarioEsVacio()
     {
-        Assert.Throws<ArgumentException>(() => new Reporte("tipo", "descripcion", Guid.NewGuid(), "url", Guid.Empty));
+        Assert.Throws<ArgumentException>(() => new Reporte("tipo", "descripcion", Guid.NewGuid(), "https://imagenes.urbanalert.com/foto.jpg", Guid.Empty));
+    }
+
+    [Fact]
+    public void Constructor_LanzaExcepcion_SiUrlImagenNoEsAbsoluta()
+    {
+        Assert.Throws<ArgumentException>(() => new Reporte("tipo", "descripcion", Guid.NewGuid(), "no-es-una-url", Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void Constructor_LanzaExcepcion_SiTipoDanoSuperaLaLongitudMaxima()
+    {
+        string tipoDano = new('a', Reporte.TipoDanoMaxLength + 1);
+
+        Assert.Throws<ArgumentException>(() => new Reporte(tipoDano, "descripcion", Guid.NewGuid(), "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void Constructor_LanzaExcepcion_SiDescripcionSuperaLaLongitudMaxima()
+    {
+        string descripcion = new('a', Reporte.DescripcionMaxLength + 1);
+
+        Assert.Throws<ArgumentException>(() => new Reporte("tipo", descripcion, Guid.NewGuid(), "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
     }
 
     [Theory]
@@ -113,6 +135,15 @@ public class ReporteTests
         Reporte reporte = CrearReporteValido();
 
         Assert.Throws<ArgumentException>(() => reporte.Rechazar(""));
+    }
+
+    [Fact]
+    public void Rechazar_LanzaExcepcion_SiElMotivoSuperaLaLongitudMaxima()
+    {
+        Reporte reporte = CrearReporteValido();
+        string motivo = new('a', Reporte.MotivoRechazoMaxLength + 1);
+
+        Assert.Throws<ArgumentException>(() => reporte.Rechazar(motivo));
     }
 
     [Fact]
