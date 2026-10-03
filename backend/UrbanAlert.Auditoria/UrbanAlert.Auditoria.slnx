@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="UrbanAlert.Auditoria.csproj" />
+  <Project Path="tests/UrbanAlert.Auditoria.Tests.csproj" />
+</Solution>
