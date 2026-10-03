@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UrbanAlert · Microservicio Usuarios — Resumen Técnico</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3350;
+      --accent: #5b8cff;
+      --accent2: #7c5cfc;
+      --green: #3ecf8e;
+      --yellow: #f5a623;
+      --red: #ff5f6d;
+      --text: #e2e8f0;
+      --muted: #8892a4;
+      --code-bg: #131720;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 15px; line-height: 1.7; }
+
+    /* Layout */
+    .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+    header { text-align: center; padding: 60px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+    header h1 { font-size: 2.4rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    header p { color: var(--muted); margin-top: 8px; font-size: 1rem; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+    .badge-green { background: rgba(62,207,142,.15); color: var(--green); border: 1px solid rgba(62,207,142,.3); }
+    .badge-yellow { background: rgba(245,166,35,.15); color: var(--yellow); border: 1px solid rgba(245,166,35,.3); }
+    .badge-blue { background: rgba(91,140,255,.15); color: var(--accent); border: 1px solid rgba(91,140,255,.3); }
+    .badge-red { background: rgba(255,95,109,.15); color: var(--red); border: 1px solid rgba(255,95,109,.3); }
+
+    /* Sections */
+    section { margin-bottom: 56px; }
+    h2 { font-size: 1.4rem; font-weight: 600; color: var(--accent); border-left: 3px solid var(--accent); padding-left: 14px; margin-bottom: 24px; }
+    h3 { font-size: 1.05rem; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+
+    /* Cards grid */
+    .grid { display: grid; gap: 16px; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px 22px; }
+    .card h3 { color: var(--accent); margin-bottom: 8px; font-size: 0.9rem; text-transform: uppercase; letter-spacing: .5px; }
+
+    /* Code blocks */
+    pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; overflow-x: auto; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.83rem; line-height: 1.6; color: #cdd9e5; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.85em; background: var(--code-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border); }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th { background: var(--surface2); color: var(--muted); text-align: left; padding: 10px 14px; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid var(--border); }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+
+    /* Architecture diagram */
+    .arch { display: flex; flex-direction: column; gap: 4px; }
+    .arch-layer { border-radius: 8px; padding: 16px 24px; border: 1px solid; }
+    .arch-layer h4 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 6px; }
+    .arch-layer p { font-size: 0.82rem; color: var(--muted); }
+    .layer-api { background: rgba(91,140,255,.08); border-color: rgba(91,140,255,.35); }
+    .layer-app { background: rgba(124,92,252,.08); border-color: rgba(124,92,252,.35); }
+    .layer-domain { background: rgba(62,207,142,.08); border-color: rgba(62,207,142,.35); }
+    .layer-infra { background: rgba(245,166,35,.08); border-color: rgba(245,166,35,.35); }
+    .layer-api h4 { color: var(--accent); }
+    .layer-app h4 { color: var(--accent2); }
+    .layer-domain h4 { color: var(--green); }
+    .layer-infra h4 { color: var(--yellow); }
+    .arch-arrow { text-align: center; color: var(--muted); font-size: 1.1rem; }
+
+    /* Checklist */
+    .checklist { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.9rem; }
+    .checklist li .icon { flex-shrink: 0; margin-top: 2px; }
+    .check { color: var(--green); }
+    .warn { color: var(--yellow); }
+    .cross { color: var(--red); }
+
+    /* Method pills */
+    .method { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; margin-right: 6px; font-family: monospace; }
+    .get { background: rgba(62,207,142,.2); color: var(--green); }
+    .post { background: rgba(91,140,255,.2); color: var(--accent); }
+    .put { background: rgba(245,166,35,.2); color: var(--yellow); }
+    .patch { background: rgba(124,92,252,.2); color: var(--accent2); }
+    .delete { background: rgba(255,95,109,.2); color: var(--red); }
+
+    /* Timeline */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .commit { display: flex; gap: 16px; padding: 10px 0; border-left: 2px solid var(--border); margin-left: 8px; padding-left: 24px; position: relative; }
+    .commit::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); position: absolute; left: -6px; top: 16px; }
+    .commit-hash { font-family: monospace; font-size: 0.78rem; color: var(--accent); flex-shrink: 0; }
+    .commit-msg { font-size: 0.88rem; color: var(--text); }
+
+    /* File tree */
+    .tree { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; line-height: 1.9; color: #cdd9e5; }
+    .tree .dir { color: var(--accent); }
+    .tree .file { color: var(--muted); }
+    .tree .highlight { color: var(--green); }
+
+    /* Seed table */
+    .uuid { font-family: monospace; font-size: 0.78rem; color: var(--accent2); }
+
+    /* Divider */
+    hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+
+    /* Footer */
+    footer { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 32px 0 0; border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>UrbanAlert · Microservicio Usuarios</h1>
+    <p>Resumen técnico completo — Rama <code>feature/backend-usuarios</code></p>
+    <div style="margin-top:16px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+      <span class="badge badge-blue">Java 21</span>
+      <span class="badge badge-blue">Spring Boot 3.3.4</span>
+      <span class="badge badge-blue">Gradle</span>
+      <span class="badge badge-green">Clean Architecture</span>
+      <span class="badge badge-yellow">Rama: feature/backend-usuarios</span>
+      <span class="badge badge-yellow">Sin fusionar a main</span>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════
+       1. ESTADO GENERAL
+  ══════════════════════════════════════════════════════ -->
+  <section>
+    <h2>1. Estado general del microservicio</h2>
+    <div class="grid grid-3">
+      <div class="card">
+        <h3>Código fuente</h3>
+        <span class="badge badge-green">Completo</span>
+        <p style="margin-top:8px; font-size:0.85rem; color:var(--muted)">Todas las capas implementadas. CRUD completo con reglas de negocio.</p>
+      </div>
+      <div class="card">
+        <h3>Tests</h3>
+        <span class="badge badge-green">56 tests</span>
+        <p style="margin-top:8px; font-size:0.85rem; color:var(--muted)">16 unitarios de dominio, 19 de servicio con Mockito, 21 de integración con Testcontainers.</p>
+      </div>
+      <div class="card">
+        <h3>Despliegue</h3>
+        <span class="badge badge-yellow">Listo en docker-compose</span>
+        <p style="margin-top:8px; font-size:0.85rem; color:var(--muted)">Dockerfile multi-stage + docker-compose.yml funcional. Aún no integrado al compose raíz del mono-repo.</p>
+      </div>
+      <div class="card">
+        <h3>Perfil local</h3>
+        <span class="badge badge-yellow">Pendiente re-import Gradle</span>
+        <p style="margin-top:8px; font-size:0.85rem; color:var(--muted)">IntelliJ necesita sincronizar como proyecto Gradle (archivo misc.xml ya corregido, target/ eliminado).</p>
+      </div>
+      <div class="card">
+        <h3>Documentación API</h3>
+        <span class="badge badge-green">Swagger UI</span>
+        <p style="margin-top:8px; font-size:0.85rem; color:var(--muted)"><code>GET /</code> redirige a <code>/swagger-ui.html</code>. Specs funcional y técnica en <code>specs/</code>.</p>
+      </div>
+      <div class="card">
+        <h3>Rama</h3>
+        <span class="badge badge-yellow">No fusionada</span>
+        <p style="margin-top:8px; font-size:0.85rem; color:var(--muted)">10 commits por encima de <code>main</code>. Pull request pendiente de revisión y merge.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       2. ARQUITECTURA CLEAN
+  ══════════════════════════════════════════════════════ -->
+  <section>
+    <h2>2. Arquitectura (Clean / Hexagonal)</h2>
+    <p style="color:var(--muted); margin-bottom:20px; font-size:0.9rem">
+      Las dependencias solo apuntan hacia adentro. El dominio no conoce Spring ni JPA.
+      La infraestructura implementa los puertos definidos por el dominio.
+    </p>
+    <div class="arch">
+      <div class="arch-layer layer-api">
+        <h4>API Layer — com.urbanalert.users.api</h4>
+        <p>UserController · HomeController · GlobalExceptionHandler<br>DTOs (CreateUserRequest, UpdateUserRequest, UpdateUserRoleRequest, UserResponse) · UserApiMapper</p>
+      </div>
+      <div class="arch-arrow">↓ llama a puertos de entrada ↓</div>
+      <div class="arch-layer layer-app">
+        <h4>Application Layer — com.urbanalert.users.application</h4>
+        <p>Puertos de entrada: CreateUserUseCase · GetUsersUseCase · GetUserByIdUseCase · UpdateUserUseCase · UpdateUserRoleUseCase · DeleteUserUseCase<br>
+        Servicio: UserService (implementa todos los use cases, transaccional, reglas de negocio)</p>
+      </div>
+      <div class="arch-arrow">↓ usa entidades de dominio ↓</div>
+      <div class="arch-layer layer-domain">
+        <h4>Domain Layer (núcleo) — com.urbanalert.users.domain</h4>
+        <p>Entidad: User (UUID v7, validaciones en constructor, sin anotaciones de framework)<br>
+        Enum: Role (USER, ADMIN)<br>
+        Puerto de salida: UserRepository (interfaz)<br>
+        Excepciones: UserNotFoundException · DuplicateEmailException · LastAdminException</p>
+      </div>
+      <div class="arch-arrow">↓ implementado por ↓</div>
+      <div class="arch-layer layer-infra">
+        <h4>Infrastructure Layer — com.urbanalert.users.infrastructure</h4>
+        <p>UserJpaEntity (@Entity, Lombok) · UserJpaRepository (JpaRepository) · UserRepositoryAdapter (implementa UserRepository)<br>
+        UserPersistenceMapper · DataInitializer (@Profile("local"), seed idempotente)</p>
+      </div>
+    </div>
+
+    <div style="margin-top: 28px;">
+      <h3>Regla clave del diseño</h3>
+      <p style="font-size:0.88rem; color:var(--muted)">
+        La entidad JPA (<code>UserJpaEntity</code>) está completamente separada de la entidad de dominio (<code>User</code>).
+        El mapper de persistencia (<code>UserPersistenceMapper</code>) traduce entre ambas.
+        Esto garantiza que cambios en la base de datos no afecten el dominio y viceversa.
+      </p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       3. ESTRUCTURA DE ARCHIVOS
+  ══════════════════════════════════════════════════════ -->
+  <section>
+    <h2>3. Estructura del proyecto</h2>
+    <div class="card">
+      <pre class="tree">backend/UrbanAlert.Usuarios/
+├── <span class="dir">specs/</span>
+│   ├── <span class="highlight">functional-spec.md</span>         ← 7 historias de usuario, escenarios G/W/T, contrato API
+│   └── <span class="highlight">technical-spec.md</span>          ← 5 escenarios QAS, ADRs, estrategia de testing
+│
+├── <span class="dir">deploy/docker/</span>
+│   ├── <span class="highlight">Dockerfile</span>                  ← Multi-stage: eclipse-temurin:21-alpine + bootJar
+│   └── <span class="highlight">docker-compose.yml</span>          ← postgres:16-alpine + users-service (puerto 8081)
+│
+├── <span class="dir">src/main/resources/</span>
+│   ├── <span class="file">application.yml</span>              ← Base: puerto 8080, Swagger, Actuator health
+│   ├── <span class="file">application-local.yml</span>        ← H2 in-memory, ddl-auto: create-drop, Flyway OFF
+│   ├── <span class="file">application-docker.yml</span>       ← PostgreSQL vía env vars, ddl-auto: validate, Flyway ON
+│   └── <span class="dir">db/migration/</span>
+│       ├── <span class="highlight">V1__create_users_table.sql</span>   ← Tabla users + índice único en email
+│       └── <span class="highlight">V2__seed_users.sql</span>          ← 7 usuarios seed (1 admin + 6 del equipo)
+│
+├── <span class="dir">src/main/java/com/urbanalert/users/</span>
+│   ├── <span class="dir">domain/</span>
+│   │   ├── model/  User.java  Role.java
+│   │   ├── port/out/  UserRepository.java
+│   │   └── exception/  UserNotFoundException  DuplicateEmailException  LastAdminException
+│   ├── <span class="dir">application/</span>
+│   │   ├── port/in/  (6 interfaces use case)
+│   │   └── service/  UserService.java
+│   ├── <span class="dir">infrastructure/</span>
+│   │   ├── persistence/entity/  UserJpaEntity.java
+│   │   ├── persistence/repository/  UserJpaRepository  UserRepositoryAdapter
+│   │   ├── persistence/mapper/  UserPersistenceMapper.java
+│   │   └── config/  DataInitializer.java
+│   └── <span class="dir">api/</span>
+│       ├── controller/  UserController  HomeController
+│       ├── dto/  CreateUserRequest  UpdateUserRequest  UpdateUserRoleRequest  UserResponse  ErrorResponse
+│       ├── mapper/  UserApiMapper.java
+│       └── exception/  GlobalExceptionHandler.java
+│
+├── <span class="dir">src/test/java/com/urbanalert/users/</span>
+│   ├── domain/  <span class="highlight">UserTest.java</span>           ← 16 tests (sin Spring)
+│   ├── application/  <span class="highlight">UserServiceTest.java</span>  ← 19 tests (Mockito)
+│   └── api/  <span class="highlight">UserControllerIT.java</span>      ← 21 tests (Testcontainers + MockMvc)
+│
+├── <span class="highlight">build.gradle.kts</span>
+└── <span class="highlight">settings.gradle.kts</span></pre>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       4. API CONTRACT
+  ══════════════════════════════════════════════════════ -->
+  <section>
+    <h2>4. Contrato de la API</h2>
+    <p style="color:var(--muted); font-size:0.88rem; margin-bottom:20px">
+      Base URL local: <code>http://localhost:8080</code> &nbsp;|&nbsp; Docker: <code>http://localhost:8081</code><br>
+      Swagger UI: <code>http://localhost:8080/swagger-ui.html</code>
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Método</th>
+          <th>Ruta</th>
+          <th>Body requerido</th>
+          <th>Respuesta éxito</th>
+          <th>Descripción</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="method post">POST</span></td>
+          <td><code>/api/v1/users</code></td>
+          <td><code>name, email, [role]</code></td>
+          <td><code>201</code> — <code>{"id": "...", "message": "User created"}</code></td>
+          <td>Crea usuario. <code>role</code> es opcional → default <code>USER</code></td>
+        </tr>
+        <tr>
+          <td><span class="method get">GET</span></td>
+          <td><code>/api/v1/users</code></td>
+          <td>—</td>
+          <td><code>200</code> — array de UserResponse</td>
+          <td>Lista todos los usuarios</td>
+        </tr>
+        <tr>
+          <td><span class="method get">GET</span></td>
+          <td><code>/api/v1/users/{id}</code></td>
+          <td>—</td>
+          <td><code>200</code> — UserResponse</td>
+          <td>Busca por UUID. <code>404</code> si no existe</td>
+        </tr>
+        <tr>
+          <td><span class="method put">PUT</span></td>
+          <td><code>/api/v1/users/{id}</code></td>
+          <td><code>name, email, role</code> (todos obligatorios)</td>
+          <td><code>200</code> — sin body</td>
+          <td>Actualización completa. <code>role</code> obligatorio aquí</td>
+        </tr>
+        <tr>
+          <td><span class="method patch">PATCH</span></td>
+          <td><code>/api/v1/users/{id}/role</code></td>
+          <td><code>{"role": "ADMIN"|"USER"}</code></td>
+          <td><code>200</code> — sin body</td>
+          <td>Cambia solo el rol. Protección del último admin activa</td>
+        </tr>
+        <tr>
+          <td><span class="method delete">DELETE</span></td>
+          <td><code>/api/v1/users/{id}</code></td>
+          <td>—</td>
+          <td><code>204</code> — sin body</td>
+          <td>Elimina usuario. Protección del último admin activa</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top: 20px;">
+      <h3>Estructura de UserResponse</h3>
+      <pre>{
+  "id":    "018f4c2a-0000-7000-8000-000000000001",
+  "name":  "Administrator",
+  "email": "admin@urbanalert.com",
+  "role":  "ADMIN"
+}</pre>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <h3>Estructura de error (todos los errores)</h3>
+      <pre>{
+  "status":  404,
+  "message": "User not found with id: 018f4c2a-0000-7000-8000-000000000099"
+}</pre>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       5. ERRORES
+  ══════════════════════════════════════════════════════ -->
+  <section>
+    <h2>5. Catálogo de errores</h2>
+    <table>
+      <thead>
+        <tr><th>Código</th><th>Causa</th><th>Mensaje típico</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="badge badge-yellow">400</span></td><td>Campo requerido vacío (<code>@NotBlank</code>)</td><td><code>Name is required</code></td></tr>
+        <tr><td><span class="badge badge-yellow">400</span></td><td>Email con formato inválido</td><td><code>Invalid email format</code></td></tr>
+        <tr><td><span class="badge badge-yellow">400</span></td><td>UUID inválido en el path</td><td><code>Invalid path parameter format</code></td></tr>
+        <tr><td><span class="badge badge-yellow">400</span></td><td>Enum desconocido (ej. <code>"SUPERUSER"</code>)</td><td><code>Invalid request body or enum value</code></td></tr>
+        <tr><td><span class="badge badge-red">404</span></td><td>ID no existe en la base de datos</td><td><code>User not found with id: ...</code></td></tr>
+        <tr><td><span class="badge badge-red">409</span></td><td>Email ya registrado</td><td><code>The email address is already registered</code></td></tr>
+        <tr><td><span class="badge badge-red">409</span></td><td>Intento de eliminar/degradar al único admin</td><td><code>Cannot remove or demote the last administrator</code></td></tr>
+        <tr><td><span class="badge badge-red">500</span></td><td>Error inesperado del servidor</td><td><code>An unexpected error occurred. Please try again later.</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       6. REGLAS DE NEGOCIO
+  ══════════════════════════════════════════════════════ -->
+  <section>
+    <h2>6. Reglas de negocio</h2>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Email único (BR-001)</h3>
+        <p style="font-size:0.88rem; color:var(--muted)">
+          No puede existir dos usuarios con el mismo email.
+          Se valida en <strong>crear</strong> y en <strong>actualizar</strong> (ignorando el propio usuario).
+          El índice <code>uix_users_email</code> en PostgreSQL actúa como segunda línea de defensa.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Último admin protegido (BR-002)</h3>
+        <p style="font-size:0.88rem; color:var(--muted)">
+          Si solo queda <strong>1 usuario con rol ADMIN</strong>, no se puede eliminar ni cambiar su rol a USER.
+          Se lanza <code>LastAdminException → 409</code>.
+          El sistema siempre debe tener al menos un admin.
+        </p>
+      </div>
+      <div class="card">
+        <h3>UUID v7 (BR-003)</h3>
+        <p style="font-size:0.88rem; color:var(--muted)">
+          Los IDs se generan con <code>java-uuid-generator</code> (<code>Generators.timeBasedEpochGenerator()</code>).
+          UUID v7 es ordenable cronológicamente — compatible con el <code>Guid.CreateVersion7()</code> usado en los microservicios .NET del mismo monorepo.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Role por defecto (BR-004)</h3>
+        <p style="font-size:0.88rem; color:var(--muted)">
+          Si se crea un usuario sin especificar <code>role</code>, se asigna <code>USER</code> automáticamente.
+          En PUT el rol es obligatorio (no hay default en actualización).
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       7. SEED DATA
+  ══════════════════════════════════════════════════════ -->
+  <section>
+    <h2>7. Datos seed (usuarios predefinidos)</h2>
+    <p style="color:var(--muted); font-size:0.88rem; margin-bottom:16px">
+      <strong>Docker/PostgreSQL:</strong> migración Flyway <code>V2__seed_users.sql</code> (se ejecuta una vez, <code>ON CONFLICT DO NOTHING</code>)<br>
+      <strong>Local/H2:</strong> <code>DataInitializer.java</code> (<code>@Profile("local")</code>) verifica por UUID antes de insertar — idempotente en reinicios
+    </p>
+    <table>
+      <thead>
+        <tr><th>#</th><th>UUID</th><th>Nombre</th><th>Email</th><th>Rol</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td class="uuid">018f4c2a-0000-7000-8000-000000000001</td><td>Administrator</td><td>admin@urbanalert.com</td><td><span class="badge badge-red">ADMIN</span></td></tr>
+        <tr><td>2</td><td class="uuid">018f4c2a-0000-7000-8000-000000000002</td><td>Felipe Caslo</td><td>facaslo.99@gmail.com</td><td><span class="badge badge-blue">USER</span></td></tr>
+        <tr><td>3</td><td class="uuid">018f4c2a-0000-7000-8000-000000000003</td><td>Julian Da Rivas</td><td>juliandarivas@gmail.com</td><td><span class="badge badge-blue">USER</span></td></tr>
+        <tr><td>4</td><td class="uuid">018f4c2a-0000-7000-8000-000000000004</td><td>Luis Gomez Banoy</td><td>luisgomezbanoy@gmail.com</td><td><span class="badge badge-blue">USER</span></td></tr>
+        <tr><td>5</td><td class="uuid">018f4c2a-0000-7000-8000-000000000005</td><td>Diana Fer</td><td>dianafer0814@gmail.com</td><td><span class="badge badge-blue">USER</span></td></tr>
+        <tr><td>6</td><td class="uuid">018f4c2a-0000-7000-8000-000000000006</td><td>Nelson Ferrucho</td><td>nelson.ferrucho.unal@gmail.com</td><td><span class="badge badge-blue">USER</span></td></tr>
+        <tr><td>7</td><td class="uuid">018f4c2a-0000-7000-8000-000000000007</td><td>Andres Lugo</td><td>anfellr11@gmail.com</td><td><span class="badge badge-blue">USER</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       8. SCHEMA DB
+  ══════════════════════════════════════════════════════ -->
+  <section>
+    <h2>8. Esquema de base de datos</h2>
+    <pre>-- V1__create_users_table.sql
+CREATE TABLE users (
+    id    UUID         NOT NULL,
+    name  VARCHAR(200) NOT NULL,
+    email VARCHAR(300) NOT NULL,
+    role  VARCHAR(20)  NOT NULL,   -- valores: 'USER' | 'ADMIN'
+    CONSTRAINT pk_users PRIMARY KEY (id)
+);
+
+CREATE UNIQUE INDEX uix_users_email ON users (email);</pre>
+    <p style="margin-top:12px; font-size:0.85rem; color:var(--muted)">
+      No hay <code>created_at</code> ni <code>updated_at</code> por ahora — el microservicio de Usuarios no gestiona auditoría propia
+      (hay un microservicio separado <code>UrbanAlert.Auditoria</code> en el monorepo para eso).
+    </p>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       9. AMBIENTES
+  ══════════════════════════════════════════════════════ -->
+  <section>
+    <h2>9. Ambientes de ejecución</h2>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Perfil: local (IntelliJ / H2)</h3>
+        <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px">Para desarrollo rápido sin Docker.</p>
+        <pre style="font-size:0.8rem">spring.profiles.active=local
+
+# H2 in-memory
+url: jdbc:h2:mem:urbanalert
+  ;DB_CLOSE_DELAY=-1
+  ;MODE=PostgreSQL
+  ;DATABASE_TO_LOWER=TRUE
+
+# Flyway desactivado (usa ddl-auto: create-drop)
+# H2 Console: http://localhost:8080/h2-console</pre>
+        <p style="margin-top:12px; font-size:0.82rem; color:var(--yellow)">
+          ⚠ IntelliJ debe sincronizarse como proyecto Gradle (abrir <code>build.gradle.kts</code> → "Open as Project").
+          El archivo <code>.idea/misc.xml</code> ya fue corregido y <code>target/</code> eliminado.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Perfil: docker (PostgreSQL)</h3>
+        <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px">Para testing integrado y despliegue.</p>
+        <pre style="font-size:0.8rem">SPRING_PROFILES_ACTIVE=docker
+DB_URL=jdbc:postgresql://postgres:5432/urbanalert_users
+DB_USERNAME=urbanalert
+DB_PASSWORD=urbanalert
+
+# Flyway activado — ejecuta V1 + V2
+# ddl-auto: validate (Hibernate no toca el schema)</pre>
+        <pre style="font-size:0.8rem; margin-top:12px"># Levantar todo con:
+cd backend/UrbanAlert.Usuarios/deploy/docker
+docker compose up -d
+
+# Servicio disponible en: http://localhost:8081
+# PostgreSQL en puerto: 5433 (evita colisión con Reportes en 5432)</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       10. DEPENDENCIAS
+  ══════════════════════════════════════════════════════ -->
+  <section>
+    <h2>10. Dependencias clave (build.gradle.kts)</h2>
+    <table>
+      <thead><tr><th>Librería</th><th>Versión</th><th>Propósito</th></tr></thead>
+      <tbody>
+        <tr><td><code>spring-boot-starter-web</code></td><td>3.3.4</td><td>REST API con Spring MVC</td></tr>
+        <tr><td><code>spring-boot-starter-data-jpa</code></td><td>3.3.4</td><td>Hibernate + Spring Data</td></tr>
+        <tr><td><code>spring-boot-starter-validation</code></td><td>3.3.4</td><td>Bean Validation (@NotBlank, @Email, etc.)</td></tr>
+        <tr><td><code>spring-boot-starter-actuator</code></td><td>3.3.4</td><td>Health check en <code>/actuator/health</code></td></tr>
+        <tr><td><code>flyway-core + flyway-database-postgresql</code></td><td>BOM</td><td>Migraciones de schema versionadas</td></tr>
+        <tr><td><code>postgresql</code></td><td>runtimeOnly</td><td>Driver JDBC PostgreSQL</td></tr>
+        <tr><td><code>springdoc-openapi-starter-webmvc-ui</code></td><td>2.6.0</td><td>Swagger UI automático</td></tr>
+        <tr><td><code>java-uuid-generator</code></td><td>5.1.0</td><td>UUID v7 (ordenable, compatible con .NET)</td></tr>
+        <tr><td><code>lombok</code></td><td>compileOnly</td><td>@Getter @Setter @NoArgsConstructor en JPA entity</td></tr>
+        <tr><td><code>h2</code></td><td>runtimeOnly</td><td>Base de datos en memoria para perfil local</td></tr>
+        <tr><td><code>spring-boot-testcontainers</code></td><td>test</td><td>PostgreSQL real en tests de integración</td></tr>
+        <tr><td><code>testcontainers:postgresql</code></td><td>1.20.1</td><td>Contenedor PostgreSQL para Testcontainers</td></tr>
+        <tr><td><code>junit-platform-launcher</code></td><td>testRuntimeOnly</td><td>Requerido por Gradle 9.x para ejecutar JUnit 5</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       11. RAMAS DEL MONOREPO
+  ══════════════════════════════════════════════════════ -->
+  <section>
+    <h2>11. Ramas del monorepo</h2>
+    <table>
+      <thead><tr><th>Rama</th><th>Estado</th><th>Contenido</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>main</code></td>
+          <td><span class="badge badge-green">Estable</span></td>
+          <td>UrbanAlert.Reportes (C#/.NET 10) · UrbanAlert.Auditoria (C#/.NET 10) · UrbanAlert.Geoespacial (Python/FastAPI)</td>
+        </tr>
+        <tr>
+          <td><code>feature/backend-usuarios</code></td>
+          <td><span class="badge badge-yellow">En desarrollo</span></td>
+          <td>Microservicio Usuarios completo (esta rama). 10 commits sobre main. Sin PR abierto.</td>
+        </tr>
+        <tr>
+          <td><code>frontend-reportes</code></td>
+          <td><span class="badge badge-blue">Paralela</span></td>
+          <td>Frontend para el módulo de Reportes. No relacionada con Usuarios.</td>
+        </tr>
+        <tr>
+          <td><code>geoespacial</code></td>
+          <td><span class="badge badge-green">Fusionada</span></td>
+          <td>Ya integrada en main. Microservicio PostGIS/FastAPI.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top: 20px;">
+      <h3>Otros microservicios en main (referencia)</h3>
+      <div class="grid grid-3">
+        <div class="card">
+          <h3>Reportes (C#/.NET 10)</h3>
+          <p style="font-size:0.82rem; color:var(--muted)">CRUD completo. RabbitMQ (MassTransit). EF Core + Npgsql. PostgreSQL en puerto 5432. Scalar UI (no Swagger).</p>
+        </div>
+        <div class="card">
+          <h3>Auditoria (C#/.NET 10)</h3>
+          <p style="font-size:0.82rem; color:var(--muted)">Consume eventos de RabbitMQ. Append-only event store. Sin CRUD propio.</p>
+        </div>
+        <div class="card">
+          <h3>Geoespacial (Python/FastAPI)</h3>
+          <p style="font-size:0.82rem; color:var(--muted)">PostGIS. Consultas espaciales para georeferenciación de reportes urbanos en Bogotá.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       12. HISTORIAL DE COMMITS
+  ══════════════════════════════════════════════════════ -->
+  <section>
+    <h2>12. Historial de commits en esta rama</h2>
+    <div class="timeline">
+      <div class="commit">
+        <span class="commit-hash">00c2d1a</span>
+        <span class="commit-msg">Se actualizan seeds: 7 usuarios reales del equipo, un solo admin genérico</span>
+      </div>
+      <div class="commit">
+        <span class="commit-hash">19637c3</span>
+        <span class="commit-msg">Se agregan perfiles local (H2) y docker (PostgreSQL), se corrige Dockerfile para Gradle</span>
+      </div>
+      <div class="commit">
+        <span class="commit-hash">36d25bf</span>
+        <span class="commit-msg">Se agregan tests unitarios de dominio y servicio, y tests de integración con Testcontainers</span>
+      </div>
+      <div class="commit">
+        <span class="commit-hash">08b8ece</span>
+        <span class="commit-msg">Se agrega la capa API: controller, DTOs, mapper y manejo global de excepciones</span>
+      </div>
+      <div class="commit">
+        <span class="commit-hash">60e78be</span>
+        <span class="commit-msg">Se agrega la capa de infraestructura: entidad JPA, repositorio Spring Data y adaptador</span>
+      </div>
+      <div class="commit">
+        <span class="commit-hash">baf8834</span>
+        <span class="commit-msg">Se agrega la capa de aplicación: puertos de entrada, UserService y reglas de negocio</span>
+      </div>
+      <div class="commit">
+        <span class="commit-hash">40a285a</span>
+        <span class="commit-msg">Se agrega la capa de dominio: entidad User, enum Role, excepciones y puerto de salida</span>
+      </div>
+      <div class="commit">
+        <span class="commit-hash">8cddb79</span>
+        <span class="commit-msg">Se agrega la estructura base del proyecto con Gradle, Spring Boot y migraciones Flyway</span>
+      </div>
+      <div class="commit">
+        <span class="commit-hash">6e11c1a</span>
+        <span class="commit-msg">Se agregan specs funcional y técnica del microservicio de usuarios</span>
+      </div>
+      <div class="commit" style="border-left-color: var(--border);">
+        <span class="commit-hash" style="color:var(--muted)">3b3221b</span>
+        <span class="commit-msg" style="color:var(--muted)">← punto de ramificación desde main (reporte auditoria v1)</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       13. CHECKLIST DE DESPLIEGUE
+  ══════════════════════════════════════════════════════ -->
+  <section>
+    <h2>13. Checklist de despliegue</h2>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3 style="color:var(--green); margin-bottom:16px">Listo</h3>
+        <ul class="checklist">
+          <li><span class="icon check">✓</span> Código fuente completo (todas las capas)</li>
+          <li><span class="icon check">✓</span> Tests unitarios (dominio + servicio)</li>
+          <li><span class="icon check">✓</span> Tests de integración (Testcontainers)</li>
+          <li><span class="icon check">✓</span> Dockerfile multi-stage (Gradle + JRE alpine)</li>
+          <li><span class="icon check">✓</span> docker-compose.yml (postgres + service)</li>
+          <li><span class="icon check">✓</span> Migraciones Flyway (V1 schema + V2 seeds)</li>
+          <li><span class="icon check">✓</span> Perfiles local y docker configurados</li>
+          <li><span class="icon check">✓</span> Swagger UI en <code>/swagger-ui.html</code></li>
+          <li><span class="icon check">✓</span> Health check en <code>/actuator/health</code></li>
+          <li><span class="icon check">✓</span> Manejo global de excepciones</li>
+          <li><span class="icon check">✓</span> Seed data con 7 usuarios del equipo</li>
+          <li><span class="icon check">✓</span> Push a <code>feature/backend-usuarios</code></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--yellow); margin-bottom:16px">Pendiente</h3>
+        <ul class="checklist">
+          <li><span class="icon warn">⚠</span> Re-importar proyecto en IntelliJ como Gradle (<code>build.gradle.kts</code> → Open as Project)</li>
+          <li><span class="icon warn">⚠</span> Ejecutar y verificar tests de integración (<code>./gradlew test</code> con Docker activo)</li>
+          <li><span class="icon warn">⚠</span> Levantar con <code>docker compose up</code> y probar endpoints en puerto 8081</li>
+          <li><span class="icon warn">⚠</span> Abrir Pull Request de <code>feature/backend-usuarios</code> → <code>main</code></li>
+          <li><span class="icon warn">⚠</span> Integrar al <code>docker-compose.yml</code> raíz del monorepo (junto con Reportes, Auditoria, Geoespacial)</li>
+          <li><span class="icon cross">✗</span> Autenticación/Autorización (JWT, Spring Security) — no está en scope actual</li>
+          <li><span class="icon cross">✗</span> Publicación de eventos a RabbitMQ — no está en scope actual</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       14. CÓMO EJECUTAR
+  ══════════════════════════════════════════════════════ -->
+  <section>
+    <h2>14. Cómo ejecutar</h2>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Opción A — IntelliJ (perfil local)</h3>
+        <ol style="font-size:0.85rem; color:var(--muted); padding-left:18px; line-height:2.2;">
+          <li>File → Open → seleccionar <code>build.gradle.kts</code> → "Open as Project"</li>
+          <li>Esperar sync de Gradle (panel derecho)</li>
+          <li>Edit Configurations → VM options: <code>-Dspring.profiles.active=local</code></li>
+          <li>Run <code>UsersApplication</code></li>
+          <li>Acceder a <code>http://localhost:8080/swagger-ui.html</code></li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>Opción B — Terminal (perfil docker)</h3>
+        <pre style="font-size:0.82rem">cd backend/UrbanAlert.Usuarios/deploy/docker
+
+# Levantar PostgreSQL + servicio
+docker compose up -d
+
+# Ver logs
+docker compose logs -f users-service
+
+# Servicio en:
+http://localhost:8081/swagger-ui.html
+
+# Bajar
+docker compose down</pre>
+      </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <h3>Opción C — Gradle directo (sin IntelliJ)</h3>
+      <pre>cd backend/UrbanAlert.Usuarios
+
+# Compilar
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk gradle compileJava --no-daemon
+
+# Tests (requiere Docker activo para Testcontainers)
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk gradle test --no-daemon
+
+# Ejecutar con perfil local
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk gradle bootRun --args='--spring.profiles.active=local' --no-daemon</pre>
+    </div>
+  </section>
+
+  <hr />
+
+  <footer>
+    <p>UrbanAlert · Microservicio Usuarios · <code>feature/backend-usuarios</code> · Generado 2026-10-03</p>
+    <p style="margin-top:6px">Repositorio: <code>github.com/Unal-Team-C/UrbanAlert</code></p>
+  </footer>
+
+</div>
+</body>
+</html>
