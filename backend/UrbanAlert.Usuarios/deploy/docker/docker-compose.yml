@@ -19,6 +19,7 @@ services:
     container_name: urbanalert-users
     restart: unless-stopped
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       DB_URL: jdbc:postgresql://postgres:5432/urbanalert_users
       DB_USERNAME: urbanalert
       DB_PASSWORD: urbanalert

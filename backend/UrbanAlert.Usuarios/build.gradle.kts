@@ -51,6 +51,9 @@ dependencies {
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
 
+    // Local development (H2 in-memory database)
+    runtimeOnly("com.h2database:h2")
+
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
