@@ -1,3 +1,4 @@
+using Application.Imagenes;
 using Application.Interfaces.ActualizarEstadoReporte;
 using Application.Interfaces.ActualizarNivelEmergenciaReporte;
 using Application.Interfaces.AsignarResponsableReporte;
@@ -56,6 +57,7 @@ public class ReportesController : ControllerBase
     }
 
     [HttpPost]
+    [Consumes("application/json")]
     [EndpointSummary("Crear un reporte")]
     [EndpointDescription("""
         Crea un nuevo reporte de daño urbano.
@@ -89,6 +91,54 @@ public class ReportesController : ControllerBase
             request.Latitud,
             request.Longitud,
             request.UrlImagen);
+
+        Guid idReporte = await _crearReporteHandler.Handle(command, cancellationToken);
+
+        return Created(
+            $"/api/v1/Reportes/{idReporte}",
+            new
+            {
+                IdReporte = idReporte,
+                message = "Reporte creado"
+            });
+    }
+
+    [HttpPost]
+    [Consumes("multipart/form-data")]
+    [EndpointSummary("Crear un reporte con imagen desde el dispositivo")]
+    [EndpointDescription("""
+        Igual que crear un reporte, pero la imagen se sube como archivo
+        en lugar de enviar su URL. Se envía como multipart/form-data con
+        los campos categoria, tipo, descripcion, latitud, longitud e
+        imagen (JPEG, PNG o WebP de hasta 10 MB; el formato se valida
+        por el contenido del archivo).
+
+        Reportes recibe el archivo junto con el reporte. Por ahora solo
+        se guarda el nombre del archivo (nombreImagen); más adelante el
+        servicio de Multimedia vinculará la imagen y devolverá la ruta
+        alojada en urlImagen.
+        """)]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    // Margen sobre el máximo de la imagen para el resto de campos del formulario.
+    [RequestSizeLimit(ValidadorImagen.TamanoMaximoBytes + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ValidadorImagen.TamanoMaximoBytes + 1024 * 1024)]
+    public async Task<IActionResult> CrearReporteConImagen(
+        [FromForm] CrearReporteConImagenRequest request,
+        CancellationToken cancellationToken)
+    {
+        await using Stream imagen = request.Imagen.OpenReadStream();
+
+        CrearReporteCommand command = new CrearReporteCommand(
+            request.Categoria,
+            request.Tipo,
+            request.Descripcion,
+            request.Latitud,
+            request.Longitud,
+            UrlImagen: null,
+            new ImagenAdjunta(imagen, request.Imagen.Length, request.Imagen.FileName));
 
         Guid idReporte = await _crearReporteHandler.Handle(command, cancellationToken);
 

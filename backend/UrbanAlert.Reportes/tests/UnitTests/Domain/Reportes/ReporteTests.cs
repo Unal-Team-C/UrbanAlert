@@ -12,6 +12,7 @@ public class ReporteTests
         Tipo,
         "Hueco grande que afecta el tránsito vehicular",
         "https://imagenes.urbanalert.com/foto.jpg",
+        null,
         Guid.NewGuid());
 
     [Fact]
@@ -39,28 +40,28 @@ public class ReporteTests
     [InlineData("descripcion", "")]
     public void Constructor_LanzaExcepcion_SiCamposDeTextoObligatoriosEstanVacios(string descripcion, string urlImagen)
     {
-        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, descripcion, urlImagen, Guid.NewGuid()));
+        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, descripcion, urlImagen, null, Guid.NewGuid()));
     }
 
     [Fact]
     public void Constructor_LanzaExcepcion_SiElTipoNoPerteneceALaCategoria()
     {
         Assert.Throws<ArgumentException>(() => new Reporte(
-            CategoriaReporte.Aseo, TipoReporte.HuecosEnLaVia, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
+            CategoriaReporte.Aseo, TipoReporte.HuecosEnLaVia, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", null, Guid.NewGuid()));
     }
 
     [Fact]
     public void Constructor_LanzaExcepcion_SiLaCategoriaNoExiste()
     {
         Assert.Throws<ArgumentException>(() => new Reporte(
-            (CategoriaReporte)99, Tipo, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
+            (CategoriaReporte)99, Tipo, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", null, Guid.NewGuid()));
     }
 
     [Fact]
     public void Constructor_LanzaExcepcion_SiElTipoNoExiste()
     {
         Assert.Throws<ArgumentException>(() => new Reporte(
-            Categoria, (TipoReporte)99, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
+            Categoria, (TipoReporte)99, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", null, Guid.NewGuid()));
     }
 
     [Fact]
@@ -102,13 +103,38 @@ public class ReporteTests
     [Fact]
     public void Constructor_LanzaExcepcion_SiIdUsuarioEsVacio()
     {
-        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", Guid.Empty));
+        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", null, Guid.Empty));
+    }
+
+    [Fact]
+    public void Constructor_AceptaSoloElNombreDeLaImagen_SinUrl()
+    {
+        Reporte reporte = new(Categoria, Tipo, "descripcion", null, "foto.jpg", Guid.NewGuid());
+
+        Assert.Null(reporte.UrlImagen);
+        Assert.Equal("foto.jpg", reporte.NombreImagen);
+    }
+
+    [Fact]
+    public void Constructor_LanzaExcepcion_SiNoHayNiUrlNiNombreDeImagen()
+    {
+        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, "descripcion", null, null, Guid.NewGuid()));
+        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, "descripcion", " ", "", Guid.NewGuid()));
+    }
+
+    [Theory]
+    [InlineData("carpeta/foto.jpg")]
+    [InlineData("..\\foto.jpg")]
+    [InlineData("..")]
+    public void Constructor_LanzaExcepcion_SiElNombreDeImagenEsUnaRuta(string nombreImagen)
+    {
+        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, "descripcion", null, nombreImagen, Guid.NewGuid()));
     }
 
     [Fact]
     public void Constructor_LanzaExcepcion_SiUrlImagenNoEsAbsoluta()
     {
-        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, "descripcion", "no-es-una-url", Guid.NewGuid()));
+        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, "descripcion", "no-es-una-url", null, Guid.NewGuid()));
     }
 
     [Fact]
@@ -116,7 +142,7 @@ public class ReporteTests
     {
         string descripcion = new('a', Reporte.DescripcionMaxLength + 1);
 
-        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, descripcion, "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
+        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, descripcion, "https://imagenes.urbanalert.com/foto.jpg", null, Guid.NewGuid()));
     }
 
     [Theory]

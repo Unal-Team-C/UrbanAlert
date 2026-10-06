@@ -2,11 +2,17 @@ using Domain.Reportes;
 
 namespace Application.Reportes.CrearReporte;
 
+// La imagen llega de una de dos formas: como URL ya alojada (JSON) o como archivo subido
+// desde el dispositivo (multipart). Se exige al menos una.
 public record CrearReporteCommand(
     CategoriaReporte Categoria,
     TipoReporte Tipo,
     string Descripcion,
     double Latitud,
     double Longitud,
-    string UrlImagen
+    string? UrlImagen,
+    ImagenAdjunta? Imagen = null
 );
+
+// El stream debe permitir volver al inicio (Seek): primero se lee su cabecera para validarlo.
+public record ImagenAdjunta(Stream Contenido, long Tamano, string NombreArchivo);

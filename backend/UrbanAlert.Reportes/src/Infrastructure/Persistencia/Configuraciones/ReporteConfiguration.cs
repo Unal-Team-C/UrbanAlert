@@ -31,8 +31,10 @@ public class ReporteConfiguration : IEntityTypeConfiguration<Reporte>
             .IsRequired();
 
         builder.Property(reporte => reporte.UrlImagen)
-            .IsRequired()
             .HasMaxLength(Reporte.UrlImagenMaxLength);
+
+        builder.Property(reporte => reporte.NombreImagen)
+            .HasMaxLength(Reporte.NombreImagenMaxLength);
 
         builder.Property(reporte => reporte.IdUsuario)
             .IsRequired();
