@@ -51,6 +51,26 @@ dotnet test tests/UrbanAlert.Auditoria.Tests.csproj
 
 La suite incluye tests unitarios y de integración. Los tests de persistencia/autorización usan Testcontainers y requieren Docker disponible; se inicia un PostgreSQL temporal y se aplica `database/001_audit_store.sql`.
 
+## Desarrollo local
+
+`appsettings.Development.json` apunta al PostgreSQL y RabbitMQ del docker-compose de `UrbanAlert.Reportes` (`deploy/docker`), y `Properties/launchSettings.json` levanta la API en `http://localhost:5040`. Las credenciales son solo para desarrollo local.
+
+Con ese compose arriba, preparar la base una sola vez (o tras borrar el volumen):
+
+```bash
+psql_reportes() { docker exec -i urbanalert-reportes-postgres psql -v ON_ERROR_STOP=1 -U urbanalert "$@"; }
+psql_reportes -d postgres <<'SQL'
+CREATE DATABASE urbanalert_auditoria;
+CREATE ROLE audit_writer LOGIN PASSWORD 'audit_writer';
+CREATE ROLE audit_reader LOGIN PASSWORD 'audit_reader';
+CREATE ROLE reportes_reader LOGIN PASSWORD 'reportes_reader';
+SQL
+psql_reportes -d urbanalert_auditoria < database/001_audit_store.sql
+psql_reportes -d urbanalert_reportes -c 'GRANT SELECT ON "Reportes" TO reportes_reader;'
+```
+
+La tabla `"Reportes"` la crean las migraciones de Reportes, así que esa API debe haberse ejecutado al menos una vez. Luego basta con `dotnet run`. En Development la referencia de la API está en `http://localhost:5040/scalar/v1`; los endpoints de `/auditoria` siguen exigiendo un JWT de Cognito.
+
 La imagen se construye con el `Dockerfile` de esta carpeta. MassTransit crea y enlaza la cola `q_auditoria_dotnet` al exchange del tipo `ReporteCreadoEvent`; los errores persistentes siguen la política de reintentos/error queue de MassTransit.
 
 ## Integración y alcance
