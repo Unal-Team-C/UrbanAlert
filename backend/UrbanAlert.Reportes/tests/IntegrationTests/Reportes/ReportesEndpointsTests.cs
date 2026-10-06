@@ -239,6 +239,71 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
     }
 
+    // PNG mínimo válido (1x1): el servicio valida el formato por su contenido.
+    private static readonly byte[] ImagenPng = Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
+
+    private static MultipartFormDataContent FormularioConImagen(byte[]? imagen, string nombreArchivo = "foto.png")
+    {
+        MultipartFormDataContent formulario = new()
+        {
+            { new StringContent("VIAS_Y_ANDENES"), "categoria" },
+            { new StringContent("HUECOS_EN_LA_VIA"), "tipo" },
+            { new StringContent("Hueco reportado desde el teléfono"), "descripcion" },
+            { new StringContent("4.6512"), "latitud" },
+            { new StringContent("-74.0561"), "longitud" },
+        };
+
+        if (imagen is not null)
+        {
+            ByteArrayContent archivo = new(imagen);
+            archivo.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
+            formulario.Add(archivo, "imagen", nombreArchivo);
+        }
+
+        return formulario;
+    }
+
+    [Fact]
+    public async Task CrearReporte_ConArchivo_GuardaElNombreDeLaImagen()
+    {
+        HttpResponseMessage respuesta = await _client.PostAsync("/api/v1/Reportes", FormularioConImagen(ImagenPng, "hueco.png"));
+        Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
+        CrearReporteRespuesta? creado = await respuesta.Content.ReadFromJsonAsync<CrearReporteRespuesta>();
+
+        ReporteRespuesta? reporte = await _client.GetFromJsonAsync<ReporteRespuesta>($"/api/v1/Reportes/{creado!.IdReporte}");
+
+        Assert.Equal("hueco.png", reporte!.NombreImagen);
+        Assert.Null(reporte.UrlImagen);
+    }
+
+    [Fact]
+    public async Task CrearReporte_ConArchivo_Devuelve400_SiNoEsUnaImagen()
+    {
+        HttpResponseMessage respuesta = await _client.PostAsync("/api/v1/Reportes", FormularioConImagen("no soy una imagen"u8.ToArray()));
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+    }
+
+    [Fact]
+    public async Task CrearReporte_ConFormulario_Devuelve400_SiFaltaElArchivo()
+    {
+        HttpResponseMessage respuesta = await _client.PostAsync("/api/v1/Reportes", FormularioConImagen(imagen: null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+    }
+
+    [Fact]
+    public async Task CrearReporte_ConJson_Devuelve400_SiFaltaLaUrlDeLaImagen()
+    {
+        HttpResponseMessage respuesta = await PostJsonAsync("""
+            {"categoria":"VIAS_Y_ANDENES","tipo":"HUECOS_EN_LA_VIA","descripcion":"Sin imagen",
+             "latitud":4.6512,"longitud":-74.0561}
+            """);
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+    }
+
     [Fact]
     public async Task ObtenerCatalogo_DevuelveLasCategoriasConSusTipos()
     {
@@ -298,7 +363,8 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         string Tipo,
         string Descripcion,
         Guid IdCoordenada,
-        string UrlImagen,
+        string? UrlImagen,
+        string? NombreImagen,
         Guid IdUsuario,
         string NivelEmergencia,
         string Estado,

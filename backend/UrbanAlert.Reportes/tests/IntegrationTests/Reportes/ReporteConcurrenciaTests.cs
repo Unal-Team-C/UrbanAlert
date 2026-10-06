@@ -16,6 +16,7 @@ public class ReporteConcurrenciaTests(ReportesApiFactory factory) : IClassFixtur
             TipoReporte.HuecosEnLaVia,
             "Hueco grande que afecta el tránsito vehicular",
             "https://imagenes.urbanalert.com/foto.jpg",
+            null,
             Guid.NewGuid());
         reporte.AsignarCoordenada(Guid.NewGuid());
 
