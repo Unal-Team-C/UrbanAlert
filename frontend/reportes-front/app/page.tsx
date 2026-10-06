@@ -46,7 +46,7 @@ export default function Home() {
   const [loadingCatalog, setLoadingCatalog] = useState(true);
 
   useEffect(() => {
-    fetch("/api/reportes/catalogo")
+    fetch("/api/v1/reportes/catalogo")
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
@@ -97,7 +97,7 @@ export default function Home() {
     };
 
     try {
-      const response = await fetch("/api/reportes", {
+      const response = await fetch("/api/v1/reportes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(reportData),

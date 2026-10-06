@@ -1,21 +1,51 @@
 # Entorno local completo de UrbanAlert.
 #   cd infrastructure && docker compose up -d --build
+# Único punto de entrada: el gateway en http://localhost:8080 (web en "/", APIs en "/api/v1/*").
+# Para exponer también los puertos de cada servicio (Scalar, Swagger, bases de datos, RabbitMQ):
+#   docker compose -f docker-compose.yml -f docker-compose.debug.yml up -d
 # Credenciales por defecto solo para desarrollo; se cambian con un .env (ver .env.example).
 
 name: urbanalert
 
 services:
+  # ---------------------------------------------------------------- Gateway
+  gateway:
+    image: nginx:1.29-alpine
+    environment:
+      GATEWAY_SHARED_SECRET: ${GATEWAY_SHARED_SECRET:-urbanalert-gateway-local}
+    volumes:
+      - ./gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    ports:
+      - "${GATEWAY_PORT:-8080}:80"
+    networks: [edge, backend]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    depends_on:
+      - frontend
+      - reportes
+      - auditoria
+      - geoespacial-api
+      - usuarios
+
+  # ---------------------------------------------------------------- Frontend
+  frontend:
+    build:
+      context: ../frontend/reportes-front
+    # Llama a /api/v1/* en el mismo origen: el gateway lo enruta, el frontend no ve los servicios.
+    networks: [edge]
+
   # ---------------------------------------------------------------- Mensajería
   rabbitmq:
     image: rabbitmq:4-management-alpine
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-urbanalert}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-urbanalert}
-    ports:
-      - "5672:5672"
-      - "15672:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+    networks: [backend]
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -33,12 +63,11 @@ services:
       AUDIT_WRITER_PASSWORD: ${AUDIT_WRITER_PASSWORD:-audit_writer}
       AUDIT_READER_PASSWORD: ${AUDIT_READER_PASSWORD:-audit_reader}
       REPORTES_READER_PASSWORD: ${REPORTES_READER_PASSWORD:-reportes_reader}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres-reportes-data:/var/lib/postgresql/data
       - ./postgres-reportes/01-auditoria.sh:/docker-entrypoint-initdb.d/01-auditoria.sh:ro
       - ../backend/UrbanAlert.Auditoria/database:/auditoria-sql:ro
+    networks: [data-reportes]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -57,8 +86,7 @@ services:
       RabbitMq__Username: ${RABBITMQ_USER:-urbanalert}
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-urbanalert}
       Geoespacial__BaseUrl: http://geoespacial-api:8000
-    ports:
-      - "5039:8080"
+    networks: [backend, data-reportes]
     depends_on:
       postgres-reportes:
         condition: service_healthy
@@ -72,8 +100,9 @@ services:
       context: ../backend
       dockerfile: UrbanAlert.Auditoria/Dockerfile
     environment:
-      # Development: no exige Cognito ni el secreto del API Gateway para arrancar.
+      # Development: no exige Cognito para arrancar. Sí exige la clave del gateway.
       ASPNETCORE_ENVIRONMENT: Development
+      Gateway__SharedSecret: ${GATEWAY_SHARED_SECRET:-urbanalert-gateway-local}
       ConnectionStrings__AuditWriter: Host=postgres-reportes;Port=5432;Database=urbanalert_auditoria;Username=audit_writer;Password=${AUDIT_WRITER_PASSWORD:-audit_writer}
       ConnectionStrings__AuditReader: Host=postgres-reportes;Port=5432;Database=urbanalert_auditoria;Username=audit_reader;Password=${AUDIT_READER_PASSWORD:-audit_reader}
       ConnectionStrings__CorePostgres: Host=postgres-reportes;Port=5432;Database=urbanalert_reportes;Username=reportes_reader;Password=${REPORTES_READER_PASSWORD:-reportes_reader}
@@ -81,8 +110,7 @@ services:
       RabbitMq__Host: rabbitmq
       RabbitMq__Username: ${RABBITMQ_USER:-urbanalert}
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-urbanalert}
-    ports:
-      - "5040:8080"
+    networks: [backend, data-reportes]
     depends_on:
       postgres-reportes:
         condition: service_healthy
@@ -97,12 +125,11 @@ services:
       POSTGRES_USER: ${GEOESPACIAL_DB_USER:-geospatial}
       POSTGRES_PASSWORD: ${GEOESPACIAL_DB_PASSWORD:-geospatial}
       POSTGRES_DB: geospatial
-    ports:
-      - "5433:5432"
     volumes:
       - geoespacial-db-data:/var/lib/postgresql/data
       - ../backend/UrbanAlert.Geoespacial/db:/geospatial-db:ro
       - ../backend/UrbanAlert.Geoespacial/db/init/01_init.sh:/docker-entrypoint-initdb.d/20_geospatial.sh:ro
+    networks: [data-geoespacial]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -115,8 +142,7 @@ services:
       target: runtime
     environment:
       DATABASE_URL: postgresql://${GEOESPACIAL_DB_USER:-geospatial}:${GEOESPACIAL_DB_PASSWORD:-geospatial}@geoespacial-db:5432/geospatial
-    ports:
-      - "8000:8000"
+    networks: [backend, data-geoespacial]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
       interval: 10s
@@ -134,10 +160,9 @@ services:
       POSTGRES_DB: urbanalert_users
       POSTGRES_USER: ${USUARIOS_DB_USER:-urbanalert}
       POSTGRES_PASSWORD: ${USUARIOS_DB_PASSWORD:-urbanalert}
-    ports:
-      - "5434:5432"
     volumes:
       - postgres-usuarios-data:/var/lib/postgresql/data
+    networks: [data-usuarios]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -153,23 +178,19 @@ services:
       DB_URL: jdbc:postgresql://postgres-usuarios:5432/urbanalert_users
       DB_USERNAME: ${USUARIOS_DB_USER:-urbanalert}
       DB_PASSWORD: ${USUARIOS_DB_PASSWORD:-urbanalert}
-    ports:
-      - "8081:8080"
+    networks: [backend, data-usuarios]
     depends_on:
       postgres-usuarios:
         condition: service_healthy
 
-  # ---------------------------------------------------------------- Frontend
-  frontend:
-    build:
-      context: ../frontend/reportes-front
-      args:
-        # El proxy /api/reportes de Next.js se fija en el build: apunta al servicio interno.
-        REPORTES_API_URL: http://reportes:8080
-    ports:
-      - "3000:3000"
-    depends_on:
-      - reportes
+# edge: gateway <-> frontend. backend: gateway <-> APIs y RabbitMQ.
+# data-*: cada API solo alcanza su propia base de datos.
+networks:
+  edge:
+  backend:
+  data-reportes:
+  data-geoespacial:
+  data-usuarios:
 
 volumes:
   rabbitmq-data:

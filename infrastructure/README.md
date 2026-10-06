@@ -1,6 +1,6 @@
 # Infraestructura local
 
-`docker-compose.yml` levanta todos los servicios de UrbanAlert con sus bases de datos y RabbitMQ.
+`docker-compose.yml` levanta todos los servicios de UrbanAlert con sus bases de datos y RabbitMQ, detrás de un **gateway (Nginx)**. El gateway es el único punto de entrada.
 
 ## Uso
 
@@ -14,44 +14,77 @@ docker compose down              # detiene todo (conserva los datos)
 docker compose down -v           # detiene todo y borra los volúmenes
 ```
 
+Abrir **http://localhost:8080**.
+
 Las credenciales tienen valores por defecto **solo para desarrollo**. Para cambiarlas: `cp .env.example .env` y editar `.env` (no se versiona).
 
-## Servicios
+## Gateway: rutas públicas
 
-| Servicio | URL en el host | Descripción |
+| Ruta | Destino interno | Notas |
 |---|---|---|
-| `frontend` | http://localhost:3000 | Formulario de reportes (Next.js) |
-| `reportes` | http://localhost:5039 — Scalar: `/scalar/v1` | API de Reportes (.NET) |
-| `auditoria` | http://localhost:5040 — Scalar: `/scalar/v1` | Auditoría de eventos (.NET) |
-| `geoespacial-api` | http://localhost:8000 — Swagger: `/docs` | Ubicación de reportes (FastAPI) |
-| `usuarios` | http://localhost:8081 — Swagger: `/swagger-ui.html` | Usuarios (Spring Boot) |
-| `rabbitmq` | `localhost:5672` — panel: http://localhost:15672 | Bus de eventos |
-| `postgres-reportes` | `localhost:5432` | Bases `urbanalert_reportes` y `urbanalert_auditoria` |
-| `geoespacial-db` | `localhost:5433` | PostgreSQL + PostGIS (`geospatial`) |
-| `postgres-usuarios` | `localhost:5434` | Base `urbanalert_users` |
+| `/` | `frontend:3000` | Formulario de reportes |
+| `/api/v1/reportes/*` | `reportes:8080/api/v1/Reportes/*` | CRUD y catálogo (`/api/v1/reportes/catalogo`) |
+| `/api/v1/geoespacial/reports` | `geoespacial-api:8000/api/v1/geospatial/reports` | **Solo GET** (mapa). La asignación de coordenadas es interna |
+| `/api/v1/usuarios/*` | `usuarios:8080/api/v1/users/*` | |
+| `/api/v1/auditoria/*` | `auditoria:8080/auditoria/*` | El gateway agrega `X-Urban-Gateway-Key`; sin ella Auditoria responde 403 |
+| `/health` | — | Salud del gateway |
 
-## Cómo se conectan
+Cualquier otra ruta bajo `/api/` responde 404. La configuración está en `gateway/default.conf.template`.
+
+## Aislamiento
+
+Solo el gateway publica un puerto en el host (`GATEWAY_PORT`, por defecto 8080). Redes de Docker:
+
+| Red | Quiénes | Para qué |
+|---|---|---|
+| `edge` | gateway, frontend | El frontend solo ve al gateway |
+| `backend` | gateway, APIs, RabbitMQ | Rutas del gateway y comunicación entre servicios |
+| `data-reportes` | postgres-reportes, reportes, auditoria | Cada API alcanza solo su base de datos |
+| `data-geoespacial` | geoespacial-db, geoespacial-api | |
+| `data-usuarios` | postgres-usuarios, usuarios | |
 
 ```
-frontend ──/api/reportes──► reportes ──HTTP──► geoespacial-api ──► geoespacial-db
-                               │
-                               ├──► postgres-reportes (urbanalert_reportes)
-                               └──ReporteCreado──► rabbitmq ──► auditoria ──► postgres-reportes (urbanalert_auditoria)
-usuarios ──► postgres-usuarios
+                 localhost:8080
+                       │
+                   gateway ─────────────── frontend            (edge)
+                       │
+     ┌─────────┬───────┴──────┬────────────────┐
+  reportes  auditoria   geoespacial-api     usuarios           (backend, con rabbitmq)
+     │  └── HTTP ──────────►  │                  │
+     │  ReporteCreado ► rabbitmq ► auditoria     │
+     ▼                        ▼                  ▼
+ postgres-reportes      geoespacial-db    postgres-usuarios    (data-*)
 ```
 
-- **Frontend → Reportes**: Next.js reenvía `/api/reportes/*` a `http://reportes:8080/api/v1/Reportes/*`. La URL se fija al construir la imagen (argumento `REPORTES_API_URL`).
+## Modo debug: puertos de cada servicio
+
+Para usar Scalar o Swagger, o para conectarse a las bases de datos o a RabbitMQ:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.debug.yml up -d
+```
+
+| Servicio | Puerto | Documentación |
+|---|---|---|
+| frontend | 3000 | |
+| reportes | 5039 | http://localhost:5039/scalar/v1 |
+| auditoria | 5040 | http://localhost:5040/scalar/v1 |
+| geoespacial-api | 8000 | http://localhost:8000/docs |
+| usuarios | 8081 | http://localhost:8081/swagger-ui.html |
+| rabbitmq | 5672, 15672 | Panel: http://localhost:15672 |
+| postgres-reportes / geoespacial-db / postgres-usuarios | 5432 / 5433 / 5434 | |
+
+## Detalles
+
 - **Reportes y Auditoria** corren con `ASPNETCORE_ENVIRONMENT=Development`. Así:
   - Reportes aplica sus migraciones al arrancar y expone Scalar;
-  - Auditoria arranca sin Cognito. Sus endpoints `/auditoria/*` siguen pidiendo un JWT; sin él responden 401.
+  - Auditoria arranca sin Cognito. Sus endpoints siguen pidiendo un JWT, así que sin token responden 401, aunque la petición pase por el gateway.
 - **`postgres-reportes/01-auditoria.sh`** se ejecuta solo con el volumen vacío:
   - crea la base de Auditoria y los roles `audit_writer`, `audit_reader` y `reportes_reader`;
   - aplica `backend/UrbanAlert.Auditoria/database/001_audit_store.sql`;
   - da a `reportes_reader` permiso de lectura sobre las tablas que creen después las migraciones de Reportes.
 
   Para volver a ejecutarlo: `docker compose down -v`.
-
-## Notas
-
-- Los puertos son los mismos que se usan al ejecutar cada servicio por separado: no se pueden levantar las dos cosas a la vez.
+- **El frontend** llama a `/api/v1/reportes` en su mismo origen. Con el compose, esa ruta la atiende el gateway. Con `npm run dev`, sin gateway, la atiende un *rewrite* de Next.js hacia `REPORTES_API_URL` (por defecto `http://localhost:5039`).
+- **En AWS**, el equivalente sería API Gateway con el *authorizer* de Cognito. Este Nginx solo reproduce las rutas y el header hacia Auditoria.
 - Cada servicio conserva su propio compose (`backend/*/deploy/docker` o `compose.yaml`) para trabajar con él de forma aislada.

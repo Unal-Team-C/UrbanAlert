@@ -6,7 +6,7 @@ RUN npm ci --no-audit --no-fund
 
 FROM node:24-alpine AS build
 WORKDIR /app
-# next.config.ts se evalúa en el build: aquí se fija a dónde reenvía /api/reportes.
+# next.config.ts se evalúa en el build. Solo se usa si el frontend corre sin el gateway.
 ARG REPORTES_API_URL=http://localhost:5039
 ENV REPORTES_API_URL=$REPORTES_API_URL \
     NEXT_TELEMETRY_DISABLED=1
