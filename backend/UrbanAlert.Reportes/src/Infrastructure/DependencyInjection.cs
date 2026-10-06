@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Application.Comun;
 using Application.Interfaces.Eventos;
 using Application.Interfaces.Reportes;
 using Infrastructure.Mensajeria;
@@ -44,6 +46,14 @@ public static class DependencyInjection
                 {
                     h.Username(usuario);
                     h.Password(contrasena);
+                });
+
+                // Los eventos usan la misma convención que la API: enums como códigos
+                // UPPER_SNAKE_CASE ("REPORTADO"); sin esto MassTransit los envía como números.
+                cfg.ConfigureJsonSerializerOptions(opciones =>
+                {
+                    opciones.Converters.Insert(0, new JsonStringEnumConverter(CodigoEnum.Politica, allowIntegerValues: false));
+                    return opciones;
                 });
             });
         });
