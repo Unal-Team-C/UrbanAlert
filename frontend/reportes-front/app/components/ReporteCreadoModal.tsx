@@ -59,7 +59,8 @@ export default function ReporteCreadoModal({ idReporte, onClose }: Props) {
         </p>
 
         <p className="mt-3 text-xs text-gray-400">
-          Número de reporte: <span className="font-mono">{idReporte}</span>
+          Número de reporte:
+          <span className="block font-mono">{idReporte}</span>
         </p>
 
         <button
