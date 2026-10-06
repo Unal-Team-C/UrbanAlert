@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { IconoMapa, IconoUbicacion } from "./components/Iconos";
 import ReporteCreadoModal from "./components/ReporteCreadoModal";
 import SeleccionUbicacionModal from "./components/SeleccionUbicacionModal";
 import {
@@ -286,8 +287,9 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setMapOpen(true)}
-                className="rounded-lg border border-gray-300 px-4 py-3 font-medium text-gray-800 hover:bg-gray-50"
+                className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 font-medium text-gray-800 hover:bg-gray-50"
               >
+                <IconoMapa />
                 Seleccionar en el mapa
               </button>
 
@@ -295,8 +297,9 @@ export default function Home() {
                 type="button"
                 onClick={locateWithGps}
                 disabled={locatingGps}
-                className="rounded-lg border border-gray-300 px-4 py-3 font-medium text-gray-800 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-500"
+                className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 font-medium text-gray-800 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-500"
               >
+                <IconoUbicacion className={`h-5 w-5 ${locatingGps ? "animate-pulse" : ""}`} />
                 {locatingGps ? "Obteniendo ubicación..." : "Usar mi ubicación"}
               </button>
             </div>
