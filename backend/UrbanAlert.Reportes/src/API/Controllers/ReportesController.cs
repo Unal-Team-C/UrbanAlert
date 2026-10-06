@@ -173,13 +173,8 @@ public class ReportesController : ControllerBase
         [FromBody] ActualizarEstadoRequest request,
         CancellationToken cancellationToken)
     {
-        if (!Enum.TryParse<EstadoReporte>(request.Estado, ignoreCase: true, out EstadoReporte nuevoEstado))
-        {
-            return BadRequest(new { message = "El estado indicado no es válido." });
-        }
-
         bool actualizado = await _actualizarEstadoReporteHandler.Handle(
-            new ActualizarEstadoReporteCommand(id, nuevoEstado), cancellationToken);
+            new ActualizarEstadoReporteCommand(id, request.Estado), cancellationToken);
 
         return actualizado ? Ok() : NotFound();
     }
@@ -199,13 +194,13 @@ public class ReportesController : ControllerBase
         [FromBody] ActualizarNivelEmergenciaRequest request,
         CancellationToken cancellationToken)
     {
-        if (!Enum.IsDefined(typeof(NivelEmergencia), request.NivelEmergencia))
+        if (!Enum.IsDefined(request.NivelEmergencia))
         {
             return BadRequest(new { message = "El nivel de emergencia indicado no es válido." });
         }
 
         bool actualizado = await _actualizarNivelEmergenciaReporteHandler.Handle(
-            new ActualizarNivelEmergenciaReporteCommand(id, (NivelEmergencia)request.NivelEmergencia), cancellationToken);
+            new ActualizarNivelEmergenciaReporteCommand(id, request.NivelEmergencia), cancellationToken);
 
         return actualizado ? Ok() : NotFound();
     }

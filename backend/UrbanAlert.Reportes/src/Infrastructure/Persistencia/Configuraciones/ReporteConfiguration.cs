@@ -14,12 +14,12 @@ public class ReporteConfiguration : IEntityTypeConfiguration<Reporte>
         builder.Property(reporte => reporte.Id).ValueGeneratedNever();
 
         builder.Property(reporte => reporte.Categoria)
-            .HasConversion<string>()
+            .HasConversion(new CodigoEnumConverter<CategoriaDano>())
             .HasMaxLength(50)
             .IsRequired();
 
         builder.Property(reporte => reporte.TipoDano)
-            .HasConversion<string>()
+            .HasConversion(new CodigoEnumConverter<TipoDano>())
             .HasMaxLength(50)
             .IsRequired();
 
@@ -38,12 +38,12 @@ public class ReporteConfiguration : IEntityTypeConfiguration<Reporte>
             .IsRequired();
 
         builder.Property(reporte => reporte.NivelEmergencia)
-            .HasConversion<string>()
+            .HasConversion(new CodigoEnumConverter<NivelEmergencia>())
             .HasMaxLength(20)
             .IsRequired();
 
         builder.Property(reporte => reporte.Estado)
-            .HasConversion<string>()
+            .HasConversion(new CodigoEnumConverter<EstadoReporte>())
             .HasMaxLength(20)
             .IsRequired();
 
