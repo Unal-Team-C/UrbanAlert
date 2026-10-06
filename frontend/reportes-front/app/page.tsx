@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+import ReporteCreadoModal from "./components/ReporteCreadoModal";
 
 // Línea entre la opción inicial ("Seleccione...") y las opciones reales.
 const SEPARADOR = "──────────────────────";
@@ -12,8 +14,6 @@ type CategoriaReporte = { codigo: string; nombre: string; tipos: TipoReporte[] }
 // Errores de la API: {"message"} desde el middleware o ProblemDetails de ASP.NET
 // ({"title", "errors"}) cuando el JSON no se puede convertir.
 type ErrorApi = { message?: string; title?: string; errors?: Record<string, string[]> };
-
-type Resultado = { tipo: "exito" | "error"; texto: string };
 
 const FORMULARIO_VACIO = {
   category: "",
@@ -37,7 +37,8 @@ async function leerError(response: Response): Promise<string> {
 export default function Home() {
   const [form, setForm] = useState(FORMULARIO_VACIO);
 
-  const [result, setResult] = useState<Resultado | null>(null);
+  const [createdId, setCreatedId] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const [categories, setCategories] = useState<CategoriaReporte[]>([]);
@@ -84,7 +85,7 @@ export default function Home() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
-    setResult(null);
+    setSubmitError("");
 
     const reportData = {
       categoria: form.category,
@@ -104,20 +105,19 @@ export default function Home() {
 
       if (response.ok) {
         const creado = (await response.json()) as { idReporte: string };
-        setResult({ tipo: "exito", texto: `Reporte creado (${creado.idReporte}).` });
         setForm(FORMULARIO_VACIO);
+        setCreatedId(creado.idReporte);
       } else {
-        setResult({ tipo: "error", texto: await leerError(response) });
+        setSubmitError(await leerError(response));
       }
     } catch {
-      setResult({
-        tipo: "error",
-        texto: "No fue posible conectar con el servicio de Reportes.",
-      });
+      setSubmitError("No fue posible conectar con el servicio de Reportes.");
     } finally {
       setSubmitting(false);
     }
   }
+
+  const closeModal = useCallback(() => setCreatedId(null), []);
 
   return (
     <main className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
@@ -281,15 +281,14 @@ export default function Home() {
           </button>
         </form>
 
-        {result && (
-          <p
-            role={result.tipo === "error" ? "alert" : "status"}
-            className={`mt-5 font-medium ${result.tipo === "exito" ? "text-green-600" : "text-red-600"}`}
-          >
-            {result.texto}
+        {submitError && (
+          <p role="alert" className="mt-5 font-medium text-red-600">
+            {submitError}
           </p>
         )}
       </div>
+
+      {createdId && <ReporteCreadoModal idReporte={createdId} onClose={closeModal} />}
     </main>
   );
 }
