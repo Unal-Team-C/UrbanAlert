@@ -1,4 +1,5 @@
 using API.Middleware;
+using Application.Geoespacial;
 using Domain.Reportes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,22 @@ public class ExceptionHandlingMiddlewareTests
         int statusCode = await InvocarConExcepcion(new DbUpdateConcurrencyException());
 
         Assert.Equal(StatusCodes.Status409Conflict, statusCode);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_MapeaGeoespacialNoDisponible_A503()
+    {
+        int statusCode = await InvocarConExcepcion(new GeoespacialNoDisponibleException("caído"));
+
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, statusCode);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_MapeaCoordenadaInvalida_A400()
+    {
+        int statusCode = await InvocarConExcepcion(new CoordenadaInvalidaException("fuera de Bogotá"));
+
+        Assert.Equal(StatusCodes.Status400BadRequest, statusCode);
     }
 
     [Fact]
