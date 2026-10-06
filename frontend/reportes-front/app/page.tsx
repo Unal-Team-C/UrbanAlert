@@ -9,17 +9,36 @@ const SEPARADOR = "────────────────────�
 type TipoReporte = { codigo: string; nombre: string };
 type CategoriaReporte = { codigo: string; nombre: string; tipos: TipoReporte[] };
 
-export default function Home() {
-  const [form, setForm] = useState({
-    category: "",
-    reportType: "",
-    description: "",
-    latitude: "",
-    longitude: "",
-    imageUrl: "",
-  });
+// Errores de la API: {"message"} desde el middleware o ProblemDetails de ASP.NET
+// ({"title", "errors"}) cuando el JSON no se puede convertir.
+type ErrorApi = { message?: string; title?: string; errors?: Record<string, string[]> };
 
-  const [message, setMessage] = useState("");
+type Resultado = { tipo: "exito" | "error"; texto: string };
+
+const FORMULARIO_VACIO = {
+  category: "",
+  reportType: "",
+  description: "",
+  latitude: "",
+  longitude: "",
+  imageUrl: "",
+};
+
+async function leerError(response: Response): Promise<string> {
+  if (response.status === 503) {
+    return "No fue posible registrar la ubicación del reporte. Intente nuevamente más tarde.";
+  }
+
+  const error = (await response.json().catch(() => null)) as ErrorApi | null;
+  const detalle = error?.errors ? Object.values(error.errors).flat()[0] : undefined;
+  return error?.message ?? detalle ?? error?.title ?? `Error inesperado (HTTP ${response.status}).`;
+}
+
+export default function Home() {
+  const [form, setForm] = useState(FORMULARIO_VACIO);
+
+  const [result, setResult] = useState<Resultado | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const [categories, setCategories] = useState<CategoriaReporte[]>([]);
   const [catalogError, setCatalogError] = useState("");
@@ -62,21 +81,42 @@ export default function Home() {
     });
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSubmitting(true);
+    setResult(null);
 
     const reportData = {
       categoria: form.category,
       tipo: form.reportType,
       descripcion: form.description,
-      lat: Number(form.latitude),
-      lon: Number(form.longitude),
+      latitud: Number(form.latitude),
+      longitud: Number(form.longitude),
       urlImagen: form.imageUrl,
     };
 
-    console.log("Datos del reporte:", reportData);
+    try {
+      const response = await fetch("/api/reportes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reportData),
+      });
 
-    setMessage("Formulario diligenciado correctamente");
+      if (response.ok) {
+        const creado = (await response.json()) as { idReporte: string };
+        setResult({ tipo: "exito", texto: `Reporte creado (${creado.idReporte}).` });
+        setForm(FORMULARIO_VACIO);
+      } else {
+        setResult({ tipo: "error", texto: await leerError(response) });
+      }
+    } catch {
+      setResult({
+        tipo: "error",
+        texto: "No fue posible conectar con el servicio de Reportes.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -225,6 +265,7 @@ export default function Home() {
               name="imageUrl"
               value={form.imageUrl}
               onChange={handleChange}
+              required
               placeholder="https://..."
               className="w-full rounded-lg border border-gray-300 p-3 text-gray-900"
             />
@@ -233,15 +274,19 @@ export default function Home() {
           {/* Botón */}
           <button
             type="submit"
-            className="w-full rounded-lg bg-black py-3 font-medium text-white hover:bg-gray-800"
+            disabled={submitting}
+            className="w-full rounded-lg bg-black py-3 font-medium text-white hover:bg-gray-800 disabled:bg-gray-400"
           >
-            Enviar reporte
+            {submitting ? "Enviando..." : "Enviar reporte"}
           </button>
         </form>
 
-        {message && (
-          <p className="mt-5 font-medium text-green-600">
-            {message}
+        {result && (
+          <p
+            role={result.tipo === "error" ? "alert" : "status"}
+            className={`mt-5 font-medium ${result.tipo === "exito" ? "text-green-600" : "text-red-600"}`}
+          >
+            {result.texto}
           </p>
         )}
       </div>
