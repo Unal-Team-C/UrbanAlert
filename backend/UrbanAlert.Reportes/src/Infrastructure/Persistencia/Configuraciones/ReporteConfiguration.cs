@@ -14,12 +14,12 @@ public class ReporteConfiguration : IEntityTypeConfiguration<Reporte>
         builder.Property(reporte => reporte.Id).ValueGeneratedNever();
 
         builder.Property(reporte => reporte.Categoria)
-            .HasConversion(new CodigoEnumConverter<CategoriaDano>())
+            .HasConversion(new CodigoEnumConverter<CategoriaReporte>())
             .HasMaxLength(50)
             .IsRequired();
 
-        builder.Property(reporte => reporte.TipoDano)
-            .HasConversion(new CodigoEnumConverter<TipoDano>())
+        builder.Property(reporte => reporte.Tipo)
+            .HasConversion(new CodigoEnumConverter<TipoReporte>())
             .HasMaxLength(50)
             .IsRequired();
 

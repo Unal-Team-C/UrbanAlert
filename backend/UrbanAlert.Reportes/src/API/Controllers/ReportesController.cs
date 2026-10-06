@@ -60,7 +60,7 @@ public class ReportesController : ControllerBase
     [EndpointDescription("""
         Crea un nuevo reporte de daño urbano.
 
-        El cliente debe proporcionar la categoría y el tipo de daño
+        El cliente debe proporcionar la categoría y el tipo de reporte
         (códigos de GET /api/v1/Reportes/catalogo; el tipo debe
         pertenecer a la categoría), descripción, identificador de
         la coordenada y URL de la imagen.
@@ -79,7 +79,7 @@ public class ReportesController : ControllerBase
     {
         CrearReporteCommand command = new CrearReporteCommand(
             request.Categoria,
-            request.TipoDano,
+            request.Tipo,
             request.Descripcion,
             request.IdCoordenada,
             request.UrlImagen);
@@ -96,16 +96,16 @@ public class ReportesController : ControllerBase
     }
 
     [HttpGet("catalogo")]
-    [EndpointSummary("Obtener el catálogo de daños")]
+    [EndpointSummary("Obtener el catálogo de reportes")]
     [EndpointDescription("""
-        Obtiene las categorías de daño con sus tipos de daño.
+        Obtiene las categorías de reporte con sus tipos.
 
         Los códigos son los valores que se envían en "categoria" y
-        "tipoDano" al crear un reporte; los nombres son los textos
+        "tipo" al crear un reporte; los nombres son los textos
         para mostrar al usuario.
         """)]
-    [ProducesResponseType<IReadOnlyList<CategoriaDanoDto>>(StatusCodes.Status200OK)]
-    public IActionResult ObtenerCatalogo() => Ok(CategoriaDanoDto.DesdeCatalogo());
+    [ProducesResponseType<IReadOnlyList<CategoriaReporteDto>>(StatusCodes.Status200OK)]
+    public IActionResult ObtenerCatalogo() => Ok(CategoriaReporteDto.DesdeCatalogo());
 
     [HttpGet]
     [EndpointSummary("Obtener reportes")]

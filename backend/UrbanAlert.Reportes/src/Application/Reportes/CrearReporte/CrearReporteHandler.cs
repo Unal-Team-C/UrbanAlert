@@ -25,7 +25,7 @@ public class CrearReporteHandler : ICrearReporteHandler
 
         Reporte reporte = new Reporte(
             command.Categoria,
-            command.TipoDano,
+            command.Tipo,
             command.Descripcion,
             command.IdCoordenada,
             command.UrlImagen,

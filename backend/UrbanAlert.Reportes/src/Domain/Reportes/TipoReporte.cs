@@ -1,8 +1,8 @@
 namespace Domain.Reportes;
 
 // Convención de valores: categoría * 100 + posición dentro de la categoría.
-// La pertenencia de cada tipo a su categoría se define en CatalogoDanos.
-public enum TipoDano
+// La pertenencia de cada tipo a su categoría se define en CatalogoReportes.
+public enum TipoReporte
 {
     // Vías y andenes
     HuecosEnLaVia = 101,

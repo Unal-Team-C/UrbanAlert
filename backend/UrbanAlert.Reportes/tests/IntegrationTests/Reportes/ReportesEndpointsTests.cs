@@ -25,8 +25,8 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     }
 
     private static CrearReporteRequest ReporteDePrueba() => new(
-        CategoriaDano.ViasYAndenes,
-        TipoDano.HuecosEnLaVia,
+        CategoriaReporte.ViasYAndenes,
+        TipoReporte.HuecosEnLaVia,
         "Hueco grande que afecta el tránsito vehicular",
         Guid.NewGuid(),
         "https://imagenes.urbanalert.com/foto.jpg");
@@ -54,7 +54,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         Assert.NotNull(reporte);
         Assert.Equal(idReporte, reporte!.Id);
         Assert.Equal("VIAS_Y_ANDENES", reporte.Categoria);
-        Assert.Equal("HUECOS_EN_LA_VIA", reporte.TipoDano);
+        Assert.Equal("HUECOS_EN_LA_VIA", reporte.Tipo);
         Assert.Equal("DEFAULT", reporte.NivelEmergencia);
         Assert.Equal("REPORTADO", reporte.Estado);
         Assert.Null(reporte.IdResponsable);
@@ -200,7 +200,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     public async Task CrearReporte_AceptaLosCodigosDelCatalogoComoTexto()
     {
         HttpResponseMessage respuesta = await PostJsonAsync("""
-            {"categoria":"SENALIZACION","tipoDano":"SEMAFORO_APAGADO","descripcion":"Semáforo sin luz",
+            {"categoria":"SENALIZACION","tipo":"SEMAFORO_APAGADO","descripcion":"Semáforo sin luz",
              "idCoordenada":"7d4a3c1e-2b5f-4e8a-9c0d-1f2e3a4b5c6d","urlImagen":"https://imagenes.urbanalert.com/foto.jpg"}
             """);
 
@@ -211,7 +211,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     public async Task CrearReporte_Devuelve400_SiElTipoNoPerteneceALaCategoria()
     {
         HttpResponseMessage respuesta = await _client.PostAsJsonAsync(
-            "/api/v1/Reportes", ReporteDePrueba() with { Categoria = CategoriaDano.Aseo }, Json);
+            "/api/v1/Reportes", ReporteDePrueba() with { Categoria = CategoriaReporte.Aseo }, Json);
 
         Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
     }
@@ -220,7 +220,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     public async Task CrearReporte_Devuelve400_SiElTipoNoExisteEnElCatalogo()
     {
         HttpResponseMessage respuesta = await PostJsonAsync("""
-            {"categoria":"VIAS_Y_ANDENES","tipoDano":"BACHE","descripcion":"Bache",
+            {"categoria":"VIAS_Y_ANDENES","tipo":"BACHE","descripcion":"Bache",
              "idCoordenada":"7d4a3c1e-2b5f-4e8a-9c0d-1f2e3a4b5c6d","urlImagen":"https://imagenes.urbanalert.com/foto.jpg"}
             """);
 
@@ -237,13 +237,13 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         CategoriaRespuesta vias = catalogo[0];
         Assert.Equal("VIAS_Y_ANDENES", vias.Codigo);
         Assert.Equal("Vías y andenes", vias.Nombre);
-        Assert.Contains(vias.TiposDano, tipo => tipo.Codigo == "HUECOS_EN_LA_VIA" && tipo.Nombre == "Huecos en la vía");
-        Assert.Equal(51, catalogo.Sum(categoria => categoria.TiposDano.Count));
+        Assert.Contains(vias.Tipos, tipo => tipo.Codigo == "HUECOS_EN_LA_VIA" && tipo.Nombre == "Huecos en la vía");
+        Assert.Equal(51, catalogo.Sum(categoria => categoria.Tipos.Count));
     }
 
     [Theory]
-    [InlineData("\"categoria\":1,\"tipoDano\":101")]
-    [InlineData("\"categoria\":\"ViasYAndenes\",\"tipoDano\":\"HuecosEnLaVia\"")]
+    [InlineData("\"categoria\":1,\"tipo\":101")]
+    [InlineData("\"categoria\":\"ViasYAndenes\",\"tipo\":\"HuecosEnLaVia\"")]
     public async Task CrearReporte_Devuelve400_SiLosCodigosNoSonUpperSnakeCase(string codigos)
     {
         HttpResponseMessage respuesta = await PostJsonAsync($$"""
@@ -268,7 +268,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     private Task<HttpResponseMessage> PostJsonAsync(string json) =>
         _client.PostAsync("/api/v1/Reportes", new StringContent(json, Encoding.UTF8, "application/json"));
 
-    private record CategoriaRespuesta(string Codigo, string Nombre, List<TipoRespuesta> TiposDano);
+    private record CategoriaRespuesta(string Codigo, string Nombre, List<TipoRespuesta> Tipos);
 
     private record TipoRespuesta(string Codigo, string Nombre);
 
@@ -283,7 +283,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     private record ReporteRespuesta(
         Guid Id,
         string Categoria,
-        string TipoDano,
+        string Tipo,
         string Descripcion,
         Guid IdCoordenada,
         string UrlImagen,
