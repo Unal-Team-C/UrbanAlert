@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+// Forma de GET /api/v1/Reportes/catalogo (servicio de Reportes).
+type TipoReporte = { codigo: string; nombre: string };
+type CategoriaReporte = { codigo: string; nombre: string; tipos: TipoReporte[] };
 
 export default function Home() {
   const [form, setForm] = useState({
-    damageType: "",
+    category: "",
+    reportType: "",
     description: "",
     latitude: "",
     longitude: "",
@@ -12,6 +17,36 @@ export default function Home() {
   });
 
   const [message, setMessage] = useState("");
+
+  const [categories, setCategories] = useState<CategoriaReporte[]>([]);
+  const [catalogError, setCatalogError] = useState("");
+  const [loadingCatalog, setLoadingCatalog] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/reportes/catalogo")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json() as Promise<CategoriaReporte[]>;
+      })
+      .then(setCategories)
+      .catch(() =>
+        setCatalogError(
+          "No fue posible cargar las categorías. Verifique que el servicio de Reportes esté disponible."
+        )
+      )
+      .finally(() => setLoadingCatalog(false));
+  }, []);
+
+  const selectedCategory = categories.find(
+    (category) => category.codigo === form.category
+  );
+
+  function handleCategoryChange(event: React.ChangeEvent<HTMLSelectElement>) {
+    // Al cambiar de categoría, el tipo elegido deja de ser válido.
+    setForm({ ...form, category: event.target.value, reportType: "" });
+  }
 
   function handleChange(
     event: React.ChangeEvent<
@@ -28,7 +63,8 @@ export default function Home() {
     event.preventDefault();
 
     const reportData = {
-      tipoDano: form.damageType,
+      categoria: form.category,
+      tipo: form.reportType,
       descripcion: form.description,
       lat: Number(form.latitude),
       lon: Number(form.longitude),
@@ -53,42 +89,61 @@ export default function Home() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
 
-          {/* Tipo de daño */}
+          {catalogError && (
+            <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+              {catalogError}
+            </p>
+          )}
+
+          {/* Categoría */}
           <div>
             <label className="mb-1 block font-medium text-gray-700">
-              Tipo de daño
+              Categoría
             </label>
 
             <select
-              name="damageType"
-              value={form.damageType}
-              onChange={handleChange}
+              name="category"
+              value={form.category}
+              onChange={handleCategoryChange}
               required
-              className="w-full rounded-lg border border-gray-300 p-3 text-gray-900"
+              disabled={loadingCatalog || categories.length === 0}
+              className="w-full rounded-lg border border-gray-300 p-3 text-gray-900 disabled:bg-gray-100"
             >
               <option value="">
-                Seleccione un tipo de daño
+                {loadingCatalog ? "Cargando categorías..." : "Seleccione una categoría"}
               </option>
 
-              <option value="infraestructura">
-                Infraestructura
+              {categories.map((category) => (
+                <option key={category.codigo} value={category.codigo}>
+                  {category.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tipo de reporte (depende de la categoría) */}
+          <div>
+            <label className="mb-1 block font-medium text-gray-700">
+              Tipo de reporte
+            </label>
+
+            <select
+              name="reportType"
+              value={form.reportType}
+              onChange={handleChange}
+              required
+              disabled={!selectedCategory}
+              className="w-full rounded-lg border border-gray-300 p-3 text-gray-900 disabled:bg-gray-100"
+            >
+              <option value="">
+                {selectedCategory ? "Seleccione un tipo de reporte" : "Primero seleccione una categoría"}
               </option>
 
-              <option value="vial">
-                Daño vial
-              </option>
-
-              <option value="inundacion">
-                Inundación
-              </option>
-
-              <option value="deslizamiento">
-                Deslizamiento
-              </option>
-
-              <option value="otro">
-                Otro
-              </option>
+              {selectedCategory?.tipos.map((type) => (
+                <option key={type.codigo} value={type.codigo}>
+                  {type.nombre}
+                </option>
+              ))}
             </select>
           </div>
 
