@@ -93,6 +93,7 @@ if (builder.Configuration.GetValue<bool>("RabbitMq:Enabled"))
                 host.Username(username);
                 host.Password(password);
             });
+            bus.ConfigureJsonSerializerOptions(CodigosEnum.ConfigurarMensajeria);
             bus.ReceiveEndpoint(queue, endpoint =>
             {
                 endpoint.UseMessageRetry(retry => retry.Intervals(
