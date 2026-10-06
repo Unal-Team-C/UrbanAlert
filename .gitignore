@@ -442,3 +442,10 @@ obj/
 # User-specific
 *.user
 *.suo
+
+
+frontend/reportes-front/node_modules/
+frontend/reportes-front/.next/
+frontend/reportes-front/.env*
+frontend/reportes-front/AGENTS.md
+frontend/reportes-front/CLAUDE.md
