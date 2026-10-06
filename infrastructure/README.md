@@ -74,6 +74,43 @@ docker compose -f docker-compose.yml -f docker-compose.debug.yml up -d
 | rabbitmq | 5672, 15672 | Panel: http://localhost:15672 |
 | postgres-reportes / geoespacial-db / postgres-usuarios | 5432 / 5433 / 5434 | |
 
+## Publicar con Cloudflare Tunnel (máquina remota)
+
+El túnel apunta al gateway por la red interna de Docker. La máquina **no necesita abrir puertos de entrada** ni tener IP pública, y Cloudflare pone el HTTPS.
+
+> ⚠️ **La API no tiene autenticación.** Quien tenga la URL puede crear y borrar reportes y usuarios. Para algo más que una demo puntual, usar el túnel con nombre **protegido con Cloudflare Access**.
+
+### Opción A: Quick Tunnel (demo rápida, sin cuenta)
+
+```bash
+docker compose --profile tunnel-rapido up -d --build
+docker compose logs tunnel-rapido | grep -o 'https://.*trycloudflare.com'
+```
+
+La URL es aleatoria y cambia cada vez que se reinicia el contenedor. No se puede proteger con Access.
+
+### Opción B: túnel con nombre (URL fija y acceso controlado)
+
+Requiere una cuenta de Cloudflare y un dominio administrado en ella.
+
+1. En Cloudflare → **Zero Trust → Networks → Tunnels**, crear un túnel de tipo *Cloudflared* y copiar su **token**.
+2. En el túnel, agregar un **Public Hostname**, por ejemplo `urbanalert.tudominio.com`, con servicio `HTTP` y URL `gateway:80`.
+3. **Proteger el hostname**: en **Zero Trust → Access → Applications**, crear una aplicación *Self-hosted* para ese hostname, con una política *Allow* que liste los correos del equipo. Cloudflare pedirá un código por correo antes de dejar entrar. Es gratis hasta 50 usuarios.
+4. En la máquina remota:
+
+   ```bash
+   cp .env.example .env    # definir CLOUDFLARE_TUNNEL_TOKEN y contraseñas propias
+   docker compose --profile tunnel up -d --build
+   docker compose logs -f tunnel   # debe mostrar "Registered tunnel connection"
+   ```
+
+### Recomendaciones para la máquina remota
+
+- **Recursos**: al menos 4 GB de RAM y 2 vCPU. Construir las imágenes allí tarda varios minutos.
+- **Credenciales**: definir contraseñas propias en `.env`, no usar los valores por defecto.
+- **Puerto del gateway**: el túnel no lo necesita. Para no exponerlo en la red de la máquina: `GATEWAY_PORT=127.0.0.1:8080`.
+- **Modo debug**: **no** combinar `docker-compose.debug.yml` con el túnel. Para revisar bases de datos o RabbitMQ en la máquina remota, usar un túnel SSH.
+
 ## Detalles
 
 - **Reportes y Auditoria** corren con `ASPNETCORE_ENVIRONMENT=Development`. Así:
