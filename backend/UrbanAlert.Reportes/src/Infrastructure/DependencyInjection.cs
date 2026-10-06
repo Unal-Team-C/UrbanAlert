@@ -1,7 +1,9 @@
 using System.Text.Json.Serialization;
 using Application.Comun;
 using Application.Interfaces.Eventos;
+using Application.Interfaces.Geoespacial;
 using Application.Interfaces.Reportes;
+using Infrastructure.Geoespacial;
 using Infrastructure.Mensajeria;
 using Infrastructure.Persistencia;
 using Infrastructure.Persistencia.Repositorios;
@@ -23,9 +25,26 @@ public static class DependencyInjection
 
         services.AddScoped<IReporteRepository, ReporteRepository>();
 
+        AgregarGeoespacial(services, configuration);
         AgregarMassTransit(services, configuration);
 
         return services;
+    }
+
+    private static void AgregarGeoespacial(IServiceCollection services, IConfiguration configuration)
+    {
+        string? baseUrl = configuration["Geoespacial:BaseUrl"];
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            throw new InvalidOperationException("No se encontró la configuración 'Geoespacial:BaseUrl'.");
+
+        // Timeout corto: la llamada es síncrona dentro de la creación del reporte.
+        int timeoutSegundos = configuration.GetValue<int?>("Geoespacial:TimeoutSegundos") ?? 3;
+
+        services.AddHttpClient<IGeoespacialClient, GeoespacialHttpClient>(client =>
+        {
+            client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(timeoutSegundos);
+        });
     }
 
     private static void AgregarMassTransit(IServiceCollection services, IConfiguration configuration)

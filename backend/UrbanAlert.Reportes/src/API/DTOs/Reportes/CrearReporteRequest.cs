@@ -6,5 +6,6 @@ public record CrearReporteRequest(
     CategoriaReporte Categoria,
     TipoReporte Tipo,
     string Descripcion,
-    Guid IdCoordenada,
+    double Latitud,
+    double Longitud,
     string UrlImagen);

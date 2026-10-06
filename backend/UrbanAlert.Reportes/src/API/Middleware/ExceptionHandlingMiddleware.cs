@@ -1,4 +1,5 @@
 using System.Net;
+using Application.Geoespacial;
 using Domain.Reportes;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,6 +17,12 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         {
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             await context.Response.WriteAsJsonAsync(new { message = ex.Message });
+        }
+        catch (GeoespacialNoDisponibleException ex)
+        {
+            logger.LogWarning(ex, "No fue posible registrar la ubicación en Geoespacial.");
+            context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+            await context.Response.WriteAsJsonAsync(new { message = "No fue posible registrar la ubicación del reporte. Intenta nuevamente más tarde." });
         }
         catch (DbUpdateConcurrencyException ex)
         {

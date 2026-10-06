@@ -62,8 +62,13 @@ public class ReportesController : ControllerBase
 
         El cliente debe proporcionar la categoría y el tipo de reporte
         (códigos de GET /api/v1/Reportes/catalogo; el tipo debe
-        pertenecer a la categoría), descripción, identificador de
-        la coordenada y URL de la imagen.
+        pertenecer a la categoría), descripción, la ubicación
+        (latitud y longitud dentro de Bogotá) y URL de la imagen.
+
+        La ubicación se registra de forma síncrona en el servicio
+        Geoespacial, que devuelve el identificador de coordenada que
+        se guarda en el reporte. Si Geoespacial no está disponible,
+        el reporte no se crea (503).
 
         La fecha de creación, el identificador del reporte, el
         nivel de emergencia inicial y el usuario (genérico mientras
@@ -72,7 +77,7 @@ public class ReportesController : ControllerBase
         """)]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> CrearReporte(
         [FromBody] CrearReporteRequest request,
         CancellationToken cancellationToken)
@@ -81,7 +86,8 @@ public class ReportesController : ControllerBase
             request.Categoria,
             request.Tipo,
             request.Descripcion,
-            request.IdCoordenada,
+            request.Latitud,
+            request.Longitud,
             request.UrlImagen);
 
         Guid idReporte = await _crearReporteHandler.Handle(command, cancellationToken);

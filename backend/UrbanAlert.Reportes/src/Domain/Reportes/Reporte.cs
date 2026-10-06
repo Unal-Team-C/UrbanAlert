@@ -32,7 +32,6 @@ public class Reporte
     public Reporte(CategoriaReporte categoria,
         TipoReporte tipo,
         string descripcion,
-        Guid idCoordenada,
         string urlImagen,
         Guid idUsuario)
     {
@@ -53,9 +52,6 @@ public class Reporte
         if (descripcion.Length > DescripcionMaxLength)
             throw new ArgumentException($"La descripción no puede superar {DescripcionMaxLength} caracteres.", nameof(descripcion));
 
-        if (idCoordenada == Guid.Empty)
-            throw new ArgumentException("El identificador de la coordenada es obligatorio.", nameof(idCoordenada));
-
         if (string.IsNullOrWhiteSpace(urlImagen))
             throw new ArgumentException("La URL de la imagen es obligatoria.", nameof(urlImagen));
 
@@ -72,12 +68,24 @@ public class Reporte
         Categoria = categoria;
         Tipo = tipo;
         Descripcion = descripcion;
-        IdCoordenada = idCoordenada;
         UrlImagen = urlImagen;
         IdUsuario = idUsuario;
         NivelEmergencia = NivelEmergencia.Default;
         Estado = EstadoReporte.Reportado;
         Fecha = DateTime.UtcNow;
+    }
+
+    // La coordenada la emite el servicio Geoespacial a partir del Id del reporte,
+    // por eso se asigna después de construir (y validar) el reporte.
+    public void AsignarCoordenada(Guid idCoordenada)
+    {
+        if (idCoordenada == Guid.Empty)
+            throw new ArgumentException("El identificador de la coordenada es obligatorio.", nameof(idCoordenada));
+
+        if (IdCoordenada != Guid.Empty)
+            throw new InvalidOperationException("El reporte ya tiene una coordenada asignada.");
+
+        IdCoordenada = idCoordenada;
     }
 
     public void ActualizarEstado(EstadoReporte nuevoEstado)
