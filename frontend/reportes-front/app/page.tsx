@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+// Línea entre la opción inicial ("Seleccione...") y las opciones reales.
+const SEPARADOR = "──────────────────────";
+
 // Forma de GET /api/v1/Reportes/catalogo (servicio de Reportes).
 type TipoReporte = { codigo: string; nombre: string };
 type CategoriaReporte = { codigo: string; nombre: string; tipos: TipoReporte[] };
@@ -113,6 +116,8 @@ export default function Home() {
                 {loadingCatalog ? "Cargando categorías..." : "Seleccione una categoría"}
               </option>
 
+              {categories.length > 0 && <option disabled>{SEPARADOR}</option>}
+
               {categories.map((category) => (
                 <option key={category.codigo} value={category.codigo}>
                   {category.nombre}
@@ -138,6 +143,8 @@ export default function Home() {
               <option value="">
                 {selectedCategory ? "Seleccione un tipo de reporte" : "Primero seleccione una categoría"}
               </option>
+
+              {selectedCategory && <option disabled>{SEPARADOR}</option>}
 
               {selectedCategory?.tipos.map((type) => (
                 <option key={type.codigo} value={type.codigo}>
