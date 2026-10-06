@@ -1,6 +1,6 @@
 namespace Domain.Reportes;
 
-public enum CategoriaDano
+public enum CategoriaReporte
 {
     ViasYAndenes = 1,
     Senalizacion = 2,

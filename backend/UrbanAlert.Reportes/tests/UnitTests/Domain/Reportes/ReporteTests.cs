@@ -4,8 +4,8 @@ namespace UnitTests.Domain.Reportes;
 
 public class ReporteTests
 {
-    private const CategoriaDano Categoria = CategoriaDano.ViasYAndenes;
-    private const TipoDano Tipo = TipoDano.HuecosEnLaVia;
+    private const CategoriaReporte Categoria = CategoriaReporte.ViasYAndenes;
+    private const TipoReporte Tipo = TipoReporte.HuecosEnLaVia;
 
     private static Reporte CrearReporteValido() => new(
         Categoria,
@@ -26,7 +26,7 @@ public class ReporteTests
         Assert.NotEqual(Guid.Empty, reporte.Id);
         Assert.Equal(7, reporte.Id.Version);
         Assert.Equal(Categoria, reporte.Categoria);
-        Assert.Equal(Tipo, reporte.TipoDano);
+        Assert.Equal(Tipo, reporte.Tipo);
         Assert.Equal(NivelEmergencia.Default, reporte.NivelEmergencia);
         Assert.Equal(EstadoReporte.Reportado, reporte.Estado);
         Assert.Null(reporte.IdResponsable);
@@ -46,21 +46,21 @@ public class ReporteTests
     public void Constructor_LanzaExcepcion_SiElTipoNoPerteneceALaCategoria()
     {
         Assert.Throws<ArgumentException>(() => new Reporte(
-            CategoriaDano.Aseo, TipoDano.HuecosEnLaVia, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
+            CategoriaReporte.Aseo, TipoReporte.HuecosEnLaVia, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
     }
 
     [Fact]
     public void Constructor_LanzaExcepcion_SiLaCategoriaNoExiste()
     {
         Assert.Throws<ArgumentException>(() => new Reporte(
-            (CategoriaDano)99, Tipo, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
+            (CategoriaReporte)99, Tipo, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
     }
 
     [Fact]
     public void Constructor_LanzaExcepcion_SiElTipoNoExiste()
     {
         Assert.Throws<ArgumentException>(() => new Reporte(
-            Categoria, (TipoDano)99, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
+            Categoria, (TipoReporte)99, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
     }
 
     [Fact]

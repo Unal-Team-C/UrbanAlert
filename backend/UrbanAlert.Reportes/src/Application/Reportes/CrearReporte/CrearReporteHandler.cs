@@ -33,7 +33,7 @@ public class CrearReporteHandler : ICrearReporteHandler
         // coordenadas de reportes que nunca se van a crear.
         Reporte reporte = new Reporte(
             command.Categoria,
-            command.TipoDano,
+            command.Tipo,
             command.Descripcion,
             command.UrlImagen,
             idUsuarioGenerico);

@@ -3,8 +3,8 @@ using Domain.Reportes;
 namespace API.DTOs.Reportes;
 
 public record CrearReporteRequest(
-    CategoriaDano Categoria,
-    TipoDano TipoDano,
+    CategoriaReporte Categoria,
+    TipoReporte Tipo,
     string Descripcion,
     double Latitud,
     double Longitud,

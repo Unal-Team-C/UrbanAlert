@@ -5,7 +5,7 @@ Content-Type: application/json
 
 {
   "categoria": "VIAS_Y_ANDENES",
-  "tipoDano": "HUECOS_EN_LA_VIA",
+  "tipo": "HUECOS_EN_LA_VIA",
   "descripcion": "Hueco grande que afecta el tránsito vehicular",
   "latitud": 4.6512,
   "longitud": -74.0561,

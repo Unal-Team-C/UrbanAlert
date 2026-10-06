@@ -15,8 +15,8 @@ public class Reporte
     };
 
     public Guid Id { get; private set; }
-    public CategoriaDano Categoria { get; private set; }
-    public TipoDano TipoDano { get; private set; }
+    public CategoriaReporte Categoria { get; private set; }
+    public TipoReporte Tipo { get; private set; }
     public string Descripcion { get; private set; } = null!;
     public Guid IdCoordenada { get; private set; }
     public string UrlImagen { get; private set; } = null!;
@@ -29,20 +29,22 @@ public class Reporte
 
     private Reporte() { }
 
-    public Reporte(CategoriaDano categoria,
-        TipoDano tipoDano,
+    public Reporte(CategoriaReporte categoria,
+        TipoReporte tipo,
         string descripcion,
         string urlImagen,
         Guid idUsuario)
     {
         if (!Enum.IsDefined(categoria))
-            throw new ArgumentException("La categoría de daño no es válida.", nameof(categoria));
+            throw new ArgumentException("La categoría de reporte no es válida.", nameof(categoria));
 
-        if (!Enum.IsDefined(tipoDano))
-            throw new ArgumentException("El tipo de daño no es válido.", nameof(tipoDano));
+        if (!Enum.IsDefined(tipo))
+            throw new ArgumentException("El tipo de reporte no es válido.", nameof(tipo));
 
-        if (!CatalogoDanos.PerteneceA(tipoDano, categoria))
-            throw new ArgumentException($"El tipo de daño {tipoDano} no pertenece a la categoría {categoria}.", nameof(tipoDano));
+        if (!CatalogoReportes.PerteneceA(tipo, categoria))
+            throw new ArgumentException(
+                $"El tipo de reporte '{CatalogoReportes.Nombre(tipo)}' no pertenece a la categoría '{CatalogoReportes.Nombre(categoria)}'.",
+                nameof(tipo));
 
         if (string.IsNullOrWhiteSpace(descripcion))
             throw new ArgumentException("La descripción es obligatoria.", nameof(descripcion));
@@ -64,7 +66,7 @@ public class Reporte
 
         Id = Guid.CreateVersion7();
         Categoria = categoria;
-        TipoDano = tipoDano;
+        Tipo = tipo;
         Descripcion = descripcion;
         UrlImagen = urlImagen;
         IdUsuario = idUsuario;

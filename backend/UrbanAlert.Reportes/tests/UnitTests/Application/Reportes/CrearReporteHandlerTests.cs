@@ -17,8 +17,8 @@ public class CrearReporteHandlerTests
     private CrearReporteHandler CrearHandler() => new(_repositorio, _geoespacial, _publicador);
 
     private static CrearReporteCommand ComandoValido() => new(
-        CategoriaDano.ViasYAndenes,
-        TipoDano.HuecosEnLaVia,
+        CategoriaReporte.ViasYAndenes,
+        TipoReporte.HuecosEnLaVia,
         "Hueco grande que afecta el tránsito vehicular",
         4.6512,
         -74.0561,
