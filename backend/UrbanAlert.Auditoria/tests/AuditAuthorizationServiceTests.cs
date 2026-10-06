@@ -50,11 +50,11 @@ public sealed class AuditAuthorizationServiceTests
     }
 
     [Fact]
-    public void ResolveUser_RejectsTokensWithoutSubject()
+    public async Task ResolveUser_RejectsTokensWithoutSubject()
     {
         ClaimsPrincipal principal = new(new ClaimsIdentity([new Claim("cognito:groups", "admin")], "test"));
 
-        Assert.Throws<AuditAuthorizationException>(() =>
+        await Assert.ThrowsAsync<AuditAuthorizationException>(() =>
             _authorization.ResolveUserAsync(principal, CancellationToken.None));
     }
 

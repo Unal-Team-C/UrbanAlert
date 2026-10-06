@@ -41,7 +41,7 @@ public sealed class S3AuditArchiveTests
         Assert.Equal($"events/2026-10-03/{record.EventId:D}.json", headRequest.Key);
         Assert.Equal(headRequest.Key, putRequest!.Key);
         Assert.Equal("application/json", putRequest.ContentType);
-        Assert.Equal(ObjectLockMode.COMPLIANCE, putRequest.ObjectLockMode);
+        Assert.Equal(ObjectLockMode.Compliance, putRequest.ObjectLockMode);
         Assert.NotNull(putRequest.ObjectLockRetainUntilDate);
         Assert.True(Convert.ToDateTime(putRequest.ObjectLockRetainUntilDate) > DateTime.UtcNow.AddDays(2554));
         using JsonDocument json = JsonDocument.Parse(archivedJson!);
