@@ -3,7 +3,8 @@ using Domain.Reportes;
 namespace Application.Reportes;
 
 public record ReporteDto(Guid Id,
-    string TipoDano,
+    CategoriaDano Categoria,
+    TipoDano TipoDano,
     string Descripcion,
     Guid IdCoordenada,
     string UrlImagen,
@@ -16,6 +17,7 @@ public record ReporteDto(Guid Id,
 {
     public static ReporteDto DesdeEntidad(Reporte reporte) => new(
         reporte.Id,
+        reporte.Categoria,
         reporte.TipoDano,
         reporte.Descripcion,
         reporte.IdCoordenada,

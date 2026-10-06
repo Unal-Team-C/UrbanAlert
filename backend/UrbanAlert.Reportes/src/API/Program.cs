@@ -1,7 +1,9 @@
 using System.Text.Json.Serialization;
 using API.HealthChecks;
 using API.Middleware;
+using API.ModelBinding;
 using Application;
+using Application.Comun;
 using Infrastructure;
 using Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -9,8 +11,13 @@ using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers()
-    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+// Enums como códigos UPPER_SNAKE_CASE y sin valores numéricos. Se registra en las
+// opciones de MVC (serialización de controladores) y en las de HTTP (las que usa OpenAPI).
+JsonStringEnumConverter codigosEnum = new(CodigoEnum.Politica, allowIntegerValues: false);
+
+builder.Services.AddControllers(options => options.ModelBinderProviders.Insert(0, new CodigoEnumModelBinderProvider()))
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(codigosEnum));
+builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(codigosEnum));
 builder.Services.AddOpenApi();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);

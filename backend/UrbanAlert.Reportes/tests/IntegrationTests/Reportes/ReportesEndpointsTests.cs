@@ -1,11 +1,22 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using API.DTOs.Reportes;
+using Application.Comun;
+using Domain.Reportes;
 
 namespace IntegrationTests.Reportes;
 
 public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
 {
+    // Mismas reglas que la API: enums como códigos UPPER_SNAKE_CASE, sin números.
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter(CodigoEnum.Politica, allowIntegerValues: false) }
+    };
+
     private readonly HttpClient _client;
 
     public ReportesEndpointsTests(ReportesApiFactory factory)
@@ -14,14 +25,15 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     }
 
     private static CrearReporteRequest ReporteDePrueba() => new(
-        "Hueco en la vía",
+        CategoriaDano.ViasYAndenes,
+        TipoDano.HuecosEnLaVia,
         "Hueco grande que afecta el tránsito vehicular",
         Guid.NewGuid(),
         "https://imagenes.urbanalert.com/foto.jpg");
 
     private async Task<Guid> CrearReporteAsync()
     {
-        HttpResponseMessage respuesta = await _client.PostAsJsonAsync("/api/v1/Reportes", ReporteDePrueba());
+        HttpResponseMessage respuesta = await _client.PostAsJsonAsync("/api/v1/Reportes", ReporteDePrueba(), Json);
         Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
 
         CrearReporteRespuesta? creado = await respuesta.Content.ReadFromJsonAsync<CrearReporteRespuesta>();
@@ -41,8 +53,10 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         ReporteRespuesta? reporte = await respuestaConsulta.Content.ReadFromJsonAsync<ReporteRespuesta>();
         Assert.NotNull(reporte);
         Assert.Equal(idReporte, reporte!.Id);
-        Assert.Equal("Default", reporte.NivelEmergencia);
-        Assert.Equal("Reportado", reporte.Estado);
+        Assert.Equal("VIAS_Y_ANDENES", reporte.Categoria);
+        Assert.Equal("HUECOS_EN_LA_VIA", reporte.TipoDano);
+        Assert.Equal("DEFAULT", reporte.NivelEmergencia);
+        Assert.Equal("REPORTADO", reporte.Estado);
         Assert.Null(reporte.IdResponsable);
         Assert.Null(reporte.MotivoRechazo);
     }
@@ -65,7 +79,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     {
         Guid idReporte = await CrearReporteAsync();
 
-        HttpResponseMessage respuesta = await _client.GetAsync("/api/v1/Reportes?estado=Rechazado");
+        HttpResponseMessage respuesta = await _client.GetAsync("/api/v1/Reportes?estado=RECHAZADO");
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
 
         PaginaRespuesta? pagina = await respuesta.Content.ReadFromJsonAsync<PaginaRespuesta>();
@@ -94,13 +108,13 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         Guid idReporte = await CrearReporteAsync();
 
         HttpResponseMessage respuestaActualizacion = await _client.PatchAsJsonAsync(
-            $"/api/v1/Reportes/{idReporte}/estado", new ActualizarEstadoRequest("Verificado"));
+            $"/api/v1/Reportes/{idReporte}/estado", new ActualizarEstadoRequest(EstadoReporte.Verificado), Json);
         Assert.Equal(HttpStatusCode.OK, respuestaActualizacion.StatusCode);
 
         HttpResponseMessage respuestaConsulta = await _client.GetAsync($"/api/v1/Reportes/{idReporte}");
         ReporteRespuesta? reporte = await respuestaConsulta.Content.ReadFromJsonAsync<ReporteRespuesta>();
 
-        Assert.Equal("Verificado", reporte!.Estado);
+        Assert.Equal("VERIFICADO", reporte!.Estado);
     }
 
     [Fact]
@@ -109,7 +123,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         Guid idReporte = await CrearReporteAsync();
 
         HttpResponseMessage respuesta = await _client.PatchAsJsonAsync(
-            $"/api/v1/Reportes/{idReporte}/estado", new ActualizarEstadoRequest("Asignado"));
+            $"/api/v1/Reportes/{idReporte}/estado", new ActualizarEstadoRequest(EstadoReporte.Asignado), Json);
 
         Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
     }
@@ -120,13 +134,13 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         Guid idReporte = await CrearReporteAsync();
 
         HttpResponseMessage respuesta = await _client.PatchAsJsonAsync(
-            $"/api/v1/Reportes/{idReporte}/nivel-emergencia", new ActualizarNivelEmergenciaRequest(3));
+            $"/api/v1/Reportes/{idReporte}/nivel-emergencia", new ActualizarNivelEmergenciaRequest(NivelEmergencia.Alta), Json);
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
 
         HttpResponseMessage respuestaConsulta = await _client.GetAsync($"/api/v1/Reportes/{idReporte}");
         ReporteRespuesta? reporte = await respuestaConsulta.Content.ReadFromJsonAsync<ReporteRespuesta>();
 
-        Assert.Equal("Alta", reporte!.NivelEmergencia);
+        Assert.Equal("ALTA", reporte!.NivelEmergencia);
     }
 
     [Fact]
@@ -143,7 +157,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         ReporteRespuesta? reporte = await respuestaConsulta.Content.ReadFromJsonAsync<ReporteRespuesta>();
 
         Assert.Equal(idResponsable, reporte!.IdResponsable);
-        Assert.Equal("Reportado", reporte.Estado);
+        Assert.Equal("REPORTADO", reporte.Estado);
     }
 
     [Fact]
@@ -158,7 +172,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         HttpResponseMessage respuestaConsulta = await _client.GetAsync($"/api/v1/Reportes/{idReporte}");
         ReporteRespuesta? reporte = await respuestaConsulta.Content.ReadFromJsonAsync<ReporteRespuesta>();
 
-        Assert.Equal("Rechazado", reporte!.Estado);
+        Assert.Equal("RECHAZADO", reporte!.Estado);
         Assert.Equal("Reporte duplicado", reporte.MotivoRechazo);
     }
 
@@ -182,6 +196,82 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         Assert.Equal(HttpStatusCode.NotFound, respuesta.StatusCode);
     }
 
+    [Fact]
+    public async Task CrearReporte_AceptaLosCodigosDelCatalogoComoTexto()
+    {
+        HttpResponseMessage respuesta = await PostJsonAsync("""
+            {"categoria":"SENALIZACION","tipoDano":"SEMAFORO_APAGADO","descripcion":"Semáforo sin luz",
+             "idCoordenada":"7d4a3c1e-2b5f-4e8a-9c0d-1f2e3a4b5c6d","urlImagen":"https://imagenes.urbanalert.com/foto.jpg"}
+            """);
+
+        Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
+    }
+
+    [Fact]
+    public async Task CrearReporte_Devuelve400_SiElTipoNoPerteneceALaCategoria()
+    {
+        HttpResponseMessage respuesta = await _client.PostAsJsonAsync(
+            "/api/v1/Reportes", ReporteDePrueba() with { Categoria = CategoriaDano.Aseo }, Json);
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+    }
+
+    [Fact]
+    public async Task CrearReporte_Devuelve400_SiElTipoNoExisteEnElCatalogo()
+    {
+        HttpResponseMessage respuesta = await PostJsonAsync("""
+            {"categoria":"VIAS_Y_ANDENES","tipoDano":"BACHE","descripcion":"Bache",
+             "idCoordenada":"7d4a3c1e-2b5f-4e8a-9c0d-1f2e3a4b5c6d","urlImagen":"https://imagenes.urbanalert.com/foto.jpg"}
+            """);
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+    }
+
+    [Fact]
+    public async Task ObtenerCatalogo_DevuelveLasCategoriasConSusTipos()
+    {
+        List<CategoriaRespuesta>? catalogo = await _client.GetFromJsonAsync<List<CategoriaRespuesta>>("/api/v1/Reportes/catalogo");
+
+        Assert.NotNull(catalogo);
+        Assert.Equal(10, catalogo!.Count);
+        CategoriaRespuesta vias = catalogo[0];
+        Assert.Equal("VIAS_Y_ANDENES", vias.Codigo);
+        Assert.Equal("Vías y andenes", vias.Nombre);
+        Assert.Contains(vias.TiposDano, tipo => tipo.Codigo == "HUECOS_EN_LA_VIA" && tipo.Nombre == "Huecos en la vía");
+        Assert.Equal(51, catalogo.Sum(categoria => categoria.TiposDano.Count));
+    }
+
+    [Theory]
+    [InlineData("\"categoria\":1,\"tipoDano\":101")]
+    [InlineData("\"categoria\":\"ViasYAndenes\",\"tipoDano\":\"HuecosEnLaVia\"")]
+    public async Task CrearReporte_Devuelve400_SiLosCodigosNoSonUpperSnakeCase(string codigos)
+    {
+        HttpResponseMessage respuesta = await PostJsonAsync($$"""
+            {{{codigos}}},"descripcion":"Hueco",
+             "idCoordenada":"7d4a3c1e-2b5f-4e8a-9c0d-1f2e3a4b5c6d","urlImagen":"https://imagenes.urbanalert.com/foto.jpg"}
+            """);
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("Rechazado")]
+    [InlineData("5")]
+    [InlineData("NO_EXISTE")]
+    public async Task ObtenerReportes_Devuelve400_SiElFiltroNoEsUnCodigoValido(string estado)
+    {
+        HttpResponseMessage respuesta = await _client.GetAsync($"/api/v1/Reportes?estado={estado}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+    }
+
+    private Task<HttpResponseMessage> PostJsonAsync(string json) =>
+        _client.PostAsync("/api/v1/Reportes", new StringContent(json, Encoding.UTF8, "application/json"));
+
+    private record CategoriaRespuesta(string Codigo, string Nombre, List<TipoRespuesta> TiposDano);
+
+    private record TipoRespuesta(string Codigo, string Nombre);
+
     private record CrearReporteRespuesta(Guid IdReporte, string Message);
 
     private record PaginaRespuesta(
@@ -192,6 +282,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
 
     private record ReporteRespuesta(
         Guid Id,
+        string Categoria,
         string TipoDano,
         string Descripcion,
         Guid IdCoordenada,

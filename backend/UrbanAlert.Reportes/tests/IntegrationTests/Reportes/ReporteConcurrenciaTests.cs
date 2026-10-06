@@ -12,7 +12,8 @@ public class ReporteConcurrenciaTests(ReportesApiFactory factory) : IClassFixtur
     public async Task ActualizarAsync_LanzaConcurrencyException_SiElReporteFueModificadoPorOtraTransaccion()
     {
         Reporte reporte = new(
-            "Hueco en la vía",
+            CategoriaDano.ViasYAndenes,
+            TipoDano.HuecosEnLaVia,
             "Hueco grande que afecta el tránsito vehicular",
             Guid.NewGuid(),
             "https://imagenes.urbanalert.com/foto.jpg",

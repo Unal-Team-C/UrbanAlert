@@ -1,7 +1,10 @@
+using Domain.Reportes;
+
 namespace Application.Reportes.CrearReporte;
 
 public record CrearReporteCommand(
-    string TipoDano,
+    CategoriaDano Categoria,
+    TipoDano TipoDano,
     string Descripcion,
     Guid IdCoordenada,
     string UrlImagen

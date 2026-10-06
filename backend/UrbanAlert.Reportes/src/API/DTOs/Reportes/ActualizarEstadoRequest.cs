@@ -1,3 +1,5 @@
+using Domain.Reportes;
+
 namespace API.DTOs.Reportes;
 
-public record ActualizarEstadoRequest(string Estado);
+public record ActualizarEstadoRequest(EstadoReporte Estado);
