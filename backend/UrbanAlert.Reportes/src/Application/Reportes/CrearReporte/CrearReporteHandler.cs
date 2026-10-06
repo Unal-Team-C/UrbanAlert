@@ -1,3 +1,4 @@
+using Application.Imagenes;
 using Application.Interfaces.CrearReporte;
 using Application.Interfaces.Eventos;
 using Application.Interfaces.Geoespacial;
@@ -29,6 +30,16 @@ public class CrearReporteHandler : ICrearReporteHandler
         // exista un proveedor de identidad real del cual tomar el usuario actual.
         Guid idUsuarioGenerico = Guid.NewGuid();
 
+        string? nombreImagen = null;
+        if (command.Imagen is not null)
+        {
+            // Reportes recibe el archivo junto con el reporte. Por ahora se valida que sea una
+            // imagen y solo se guarda su nombre; más adelante el servicio de Multimedia vinculará
+            // la imagen y devolverá la ruta alojada, que se guardará como UrlImagen.
+            await ValidadorImagen.ValidarAsync(command.Imagen.Contenido, command.Imagen.Tamano, cancellationToken);
+            nombreImagen = NombreDeArchivo(command.Imagen.NombreArchivo);
+        }
+
         // Se valida el reporte antes de llamar a Geoespacial para no registrar
         // coordenadas de reportes que nunca se van a crear.
         Reporte reporte = new Reporte(
@@ -36,6 +47,7 @@ public class CrearReporteHandler : ICrearReporteHandler
             command.Tipo,
             command.Descripcion,
             command.UrlImagen,
+            nombreImagen,
             idUsuarioGenerico);
 
         Guid idCoordenada = await _geoespacialClient.AsignarCoordenadaAsync(
@@ -52,5 +64,23 @@ public class CrearReporteHandler : ICrearReporteHandler
         await _eventPublisher.PublicarAsync(evento, cancellationToken);
 
         return reporte.Id;
+    }
+
+    // Algunos navegadores envían la ruta completa ("C:\fakepath\foto.jpg"): solo interesa el
+    // nombre. Si es muy largo se recorta conservando la extensión.
+    private static string NombreDeArchivo(string nombreEnviado)
+    {
+        string nombre = nombreEnviado.Split('/', '\\').Last().Trim();
+        if (nombre.Length == 0 || nombre is "." or "..")
+            return "imagen";
+
+        if (nombre.Length <= Reporte.NombreImagenMaxLength)
+            return nombre;
+
+        string extension = Path.GetExtension(nombre);
+        if (extension.Length > 10)
+            extension = "";
+
+        return nombre[..(Reporte.NombreImagenMaxLength - extension.Length)] + extension;
     }
 }

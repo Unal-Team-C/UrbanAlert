@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { IconoMapa, IconoUbicacion } from "./components/Iconos";
+import { IconoCamara, IconoMapa, IconoUbicacion } from "./components/Iconos";
 import ReporteCreadoModal from "./components/ReporteCreadoModal";
 import SeleccionUbicacionModal from "./components/SeleccionUbicacionModal";
+import { TIPOS_IMAGEN, formatearTamano, validarImagen } from "./lib/imagen";
 import {
   dentroDeBogota,
   formatearCoordenada,
@@ -28,7 +29,6 @@ const FORMULARIO_VACIO = {
   category: "",
   reportType: "",
   description: "",
-  imageUrl: "",
 };
 
 async function leerError(response: Response): Promise<string> {
@@ -47,6 +47,12 @@ export default function Home() {
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageError, setImageError] = useState("");
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const [location, setLocation] = useState<Ubicacion | null>(null);
   const [locationError, setLocationError] = useState("");
@@ -140,8 +146,47 @@ export default function Home() {
     updateLocation({ ...coordenada, origen: "mapa" });
   }
 
+  function setImageFile(archivo: File) {
+    setImagePreview((anterior) => {
+      if (anterior) URL.revokeObjectURL(anterior);
+      return URL.createObjectURL(archivo);
+    });
+    setImage(archivo);
+  }
+
+  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const archivo = event.target.files?.[0];
+    // Permite volver a elegir el mismo archivo después de quitarlo.
+    event.target.value = "";
+    if (!archivo) {
+      return;
+    }
+
+    const error = validarImagen(archivo);
+    if (error) {
+      setImageError(error);
+      return;
+    }
+    setImageError("");
+    setImageFile(archivo);
+  }
+
+  function removeImage() {
+    setImagePreview((anterior) => {
+      if (anterior) URL.revokeObjectURL(anterior);
+      return null;
+    });
+    setImage(null);
+    setImageError("");
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!image) {
+      setImageError("Agregue una imagen del daño: tómela con la cámara o elíjala de la galería.");
+      return;
+    }
 
     if (!location) {
       setLocationError("Indique la ubicación del reporte: en el mapa o con su ubicación actual.");
@@ -151,20 +196,20 @@ export default function Home() {
     setSubmitting(true);
     setSubmitError("");
 
-    const reportData = {
-      categoria: form.category,
-      tipo: form.reportType,
-      descripcion: form.description,
-      latitud: location.lat,
-      longitud: location.lon,
-      urlImagen: form.imageUrl,
-    };
+    // multipart/form-data con todos los datos del reporte y el archivo. El navegador fija el
+    // Content-Type con su boundary, por eso no se indica en los headers.
+    const reportData = new FormData();
+    reportData.append("categoria", form.category);
+    reportData.append("tipo", form.reportType);
+    reportData.append("descripcion", form.description);
+    reportData.append("latitud", String(location.lat));
+    reportData.append("longitud", String(location.lon));
+    reportData.append("imagen", image);
 
     try {
       const response = await fetch("/api/v1/reportes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(reportData),
+        body: reportData,
       });
 
       if (response.ok) {
@@ -172,6 +217,8 @@ export default function Home() {
         setForm(FORMULARIO_VACIO);
         setLocation(null);
         setLocationError("");
+        setImage(null);
+        setImageError("");
         setCreatedId(creado.idReporte);
       } else {
         setSubmitError(await leerError(response));
@@ -182,6 +229,10 @@ export default function Home() {
       setSubmitting(false);
     }
   }
+
+  useEffect(() => () => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+  }, [imagePreview]);
 
   const closeModal = useCallback(() => setCreatedId(null), []);
 
@@ -325,21 +376,76 @@ export default function Home() {
             )}
           </div>
 
-          {/* Imagen */}
+          {/* Imagen: desde la cámara o la galería del dispositivo */}
           <div>
-            <label className="mb-1 block font-medium text-gray-700">
-              URL de imagen
-            </label>
+            <p className="mb-2 font-medium text-gray-700">
+              Imagen
+            </p>
 
             <input
-              type="url"
-              name="imageUrl"
-              value={form.imageUrl}
-              onChange={handleChange}
-              required
-              placeholder="https://..."
-              className="w-full rounded-lg border border-gray-300 p-3 text-gray-900"
+              ref={imageInputRef}
+              type="file"
+              accept={TIPOS_IMAGEN.join(",")}
+              onChange={handleImageChange}
+              className="hidden"
+              aria-label="Imagen del reporte (galería)"
             />
+            {/* capture="environment" abre directamente la cámara trasera en móviles compatibles;
+                en escritorio, donde no aplica, el navegador la ignora y abre el selector de archivos. */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept={TIPOS_IMAGEN.join(",")}
+              capture="environment"
+              onChange={handleImageChange}
+              className="hidden"
+              aria-label="Imagen del reporte (cámara)"
+            />
+
+            {image && imagePreview ? (
+              <div className="flex items-center gap-4 rounded-lg border border-gray-200 p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element -- vista previa local (blob:) */}
+                <img src={imagePreview} alt="Vista previa de la imagen" className="h-20 w-20 rounded-md object-cover" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-gray-800">{image.name}</p>
+                  <p className="text-sm text-gray-500">{formatearTamano(image.size)}</p>
+                </div>
+                <div className="flex flex-col gap-1 text-sm">
+                  <button type="button" onClick={() => imageInputRef.current?.click()} className="font-medium text-gray-700 hover:underline">
+                    Cambiar
+                  </button>
+                  <button type="button" onClick={removeImage} className="font-medium text-red-600 hover:underline">
+                    Quitar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-400 px-4 py-6 font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <IconoCamara />
+                  Activar cámara
+                </button>
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-400 px-4 py-6 font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Elegir de la galería
+                </button>
+              </div>
+            )}
+
+            <p className="mt-2 text-xs text-gray-500">JPEG, PNG o WebP, hasta 10 MB.</p>
+
+            {imageError && (
+              <p role="alert" className="mt-2 text-sm text-red-600">
+                {imageError}
+              </p>
+            )}
           </div>
 
           {/* Botón */}

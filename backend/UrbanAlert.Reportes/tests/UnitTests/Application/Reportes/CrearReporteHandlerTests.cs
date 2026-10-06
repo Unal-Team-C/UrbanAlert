@@ -1,10 +1,12 @@
 using Application.Geoespacial;
+using Application.Imagenes;
 using Application.Interfaces.Eventos;
 using Application.Interfaces.Geoespacial;
 using Application.Interfaces.Reportes;
 using Application.Reportes.CrearReporte;
 using Application.Reportes.Eventos;
 using Domain.Reportes;
+using UnitTests.Application.Imagenes;
 
 namespace UnitTests.Application.Reportes;
 
@@ -55,6 +57,38 @@ public class CrearReporteHandlerTests
         CrearReporteCommand comando = ComandoValido() with { Descripcion = "" };
 
         await Assert.ThrowsAsync<ArgumentException>(() => CrearHandler().Handle(comando, CancellationToken.None));
+
+        Assert.Empty(_geoespacial.Llamadas);
+        Assert.Empty(_repositorio.Agregados);
+    }
+
+    [Fact]
+    public async Task Handle_ConArchivo_GuardaSoloElNombreDeLaImagen()
+    {
+        CrearReporteCommand comando = ComandoValido() with
+        {
+            UrlImagen = null,
+            Imagen = new ImagenAdjunta(new MemoryStream(ValidadorImagenTests.Png), ValidadorImagenTests.Png.Length, @"C:\fakepath\foto.png")
+        };
+
+        await CrearHandler().Handle(comando, CancellationToken.None);
+
+        Reporte guardado = Assert.Single(_repositorio.Agregados);
+        Assert.Equal("foto.png", guardado.NombreImagen);
+        Assert.Null(guardado.UrlImagen);
+    }
+
+    [Fact]
+    public async Task Handle_NoLlamaAGeoespacial_SiElArchivoNoEsUnaImagen()
+    {
+        byte[] texto = "no soy una imagen"u8.ToArray();
+        CrearReporteCommand comando = ComandoValido() with
+        {
+            UrlImagen = null,
+            Imagen = new ImagenAdjunta(new MemoryStream(texto), texto.Length, "foto.png")
+        };
+
+        await Assert.ThrowsAsync<ImagenInvalidaException>(() => CrearHandler().Handle(comando, CancellationToken.None));
 
         Assert.Empty(_geoespacial.Llamadas);
         Assert.Empty(_repositorio.Agregados);

@@ -4,6 +4,7 @@ public class Reporte
 {
     public const int DescripcionMaxLength = 2000;
     public const int UrlImagenMaxLength = 2000;
+    public const int NombreImagenMaxLength = 255;
     public const int MotivoRechazoMaxLength = 2000;
 
     private static readonly Dictionary<EstadoReporte, EstadoReporte> SiguienteEstado = new()
@@ -19,7 +20,12 @@ public class Reporte
     public TipoReporte Tipo { get; private set; }
     public string Descripcion { get; private set; } = null!;
     public Guid IdCoordenada { get; private set; }
-    public string UrlImagen { get; private set; } = null!;
+    // Ruta donde está alojada la imagen. Hoy la envían los clientes que usan JSON; para las
+    // imágenes subidas desde el dispositivo la devolverá más adelante el servicio de Multimedia.
+    public string? UrlImagen { get; private set; }
+    // Nombre del archivo subido desde el dispositivo junto con el reporte. Por ahora solo se
+    // guarda el nombre; el servicio de Multimedia vinculará la imagen y completará UrlImagen.
+    public string? NombreImagen { get; private set; }
     public Guid IdUsuario { get; private set; }
     public NivelEmergencia NivelEmergencia { get; private set; }
     public EstadoReporte Estado { get; private set; }
@@ -32,7 +38,8 @@ public class Reporte
     public Reporte(CategoriaReporte categoria,
         TipoReporte tipo,
         string descripcion,
-        string urlImagen,
+        string? urlImagen,
+        string? nombreImagen,
         Guid idUsuario)
     {
         if (!Enum.IsDefined(categoria))
@@ -52,14 +59,14 @@ public class Reporte
         if (descripcion.Length > DescripcionMaxLength)
             throw new ArgumentException($"La descripción no puede superar {DescripcionMaxLength} caracteres.", nameof(descripcion));
 
-        if (string.IsNullOrWhiteSpace(urlImagen))
-            throw new ArgumentException("La URL de la imagen es obligatoria.", nameof(urlImagen));
+        if (string.IsNullOrWhiteSpace(urlImagen) && string.IsNullOrWhiteSpace(nombreImagen))
+            throw new ArgumentException("La imagen del reporte es obligatoria: su URL o el archivo.", nameof(urlImagen));
 
-        if (urlImagen.Length > UrlImagenMaxLength)
-            throw new ArgumentException($"La URL de la imagen no puede superar {UrlImagenMaxLength} caracteres.", nameof(urlImagen));
+        if (!string.IsNullOrWhiteSpace(urlImagen))
+            ValidarUrlImagen(urlImagen);
 
-        if (!Uri.TryCreate(urlImagen, UriKind.Absolute, out _))
-            throw new ArgumentException("La URL de la imagen no es una URL absoluta válida.", nameof(urlImagen));
+        if (!string.IsNullOrWhiteSpace(nombreImagen))
+            ValidarNombreImagen(nombreImagen);
 
         if (idUsuario == Guid.Empty)
             throw new ArgumentException("El identificador del usuario es obligatorio.", nameof(idUsuario));
@@ -68,7 +75,8 @@ public class Reporte
         Categoria = categoria;
         Tipo = tipo;
         Descripcion = descripcion;
-        UrlImagen = urlImagen;
+        UrlImagen = string.IsNullOrWhiteSpace(urlImagen) ? null : urlImagen;
+        NombreImagen = string.IsNullOrWhiteSpace(nombreImagen) ? null : nombreImagen;
         IdUsuario = idUsuario;
         NivelEmergencia = NivelEmergencia.Default;
         Estado = EstadoReporte.Reportado;
@@ -122,5 +130,24 @@ public class Reporte
 
         Estado = EstadoReporte.Rechazado;
         MotivoRechazo = motivo;
+    }
+
+    private static void ValidarUrlImagen(string urlImagen)
+    {
+        if (urlImagen.Length > UrlImagenMaxLength)
+            throw new ArgumentException($"La URL de la imagen no puede superar {UrlImagenMaxLength} caracteres.", nameof(urlImagen));
+
+        if (!Uri.TryCreate(urlImagen, UriKind.Absolute, out _))
+            throw new ArgumentException("La URL de la imagen no es una URL absoluta válida.", nameof(urlImagen));
+    }
+
+    private static void ValidarNombreImagen(string nombreImagen)
+    {
+        if (nombreImagen.Length > NombreImagenMaxLength)
+            throw new ArgumentException($"El nombre de la imagen no puede superar {NombreImagenMaxLength} caracteres.", nameof(nombreImagen));
+
+        // Es solo un nombre de archivo, nunca una ruta.
+        if (nombreImagen.IndexOfAny(['/', '\\']) >= 0 || nombreImagen is "." or "..")
+            throw new ArgumentException("El nombre de la imagen no es válido.", nameof(nombreImagen));
     }
 }

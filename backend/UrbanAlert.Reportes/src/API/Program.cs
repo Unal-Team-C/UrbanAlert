@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Serialization;
 using API.HealthChecks;
 using API.Middleware;
@@ -8,6 +9,11 @@ using Infrastructure;
 using Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
+
+// Cultura invariante: los números de los formularios (multipart) se interpretan con la
+// cultura del proceso; así "4.65" es siempre 4.65, también en un servidor configurado en español.
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
