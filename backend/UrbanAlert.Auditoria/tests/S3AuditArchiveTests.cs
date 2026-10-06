@@ -91,7 +91,7 @@ public sealed class S3AuditArchiveTests
             occurredAt = "2026-10-03T12:00:00Z",
             correlationId = (Guid?)null,
             reportId,
-            data = new { actorId, idCoordenada = Guid.NewGuid(), estado = "Reportado" }
+            data = new { actorId, idCoordenada = Guid.NewGuid(), estado = "REPORTADO" }
         }));
         return new AuditEventResponse(7, eventId, "reporte.creado", 1,
             new DateTimeOffset(2026, 10, 3, 12, 0, 0, TimeSpan.Zero), actorId, null,
