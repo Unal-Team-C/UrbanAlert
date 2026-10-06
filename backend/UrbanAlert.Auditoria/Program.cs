@@ -5,6 +5,7 @@ using Amazon.S3;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
 using UrbanAlert.Auditoria;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -105,7 +106,10 @@ if (builder.Configuration.GetValue<bool>("RabbitMq:Enabled"))
 WebApplication app = builder.Build();
 
 if (app.Environment.IsDevelopment())
+{
     app.MapOpenApi();
+    app.MapScalarApiReference();
+}
 
 app.Use(async (context, next) =>
 {
