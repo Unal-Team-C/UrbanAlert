@@ -28,7 +28,8 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         CategoriaDano.ViasYAndenes,
         TipoDano.HuecosEnLaVia,
         "Hueco grande que afecta el tránsito vehicular",
-        Guid.NewGuid(),
+        4.6512,
+        -74.0561,
         "https://imagenes.urbanalert.com/foto.jpg");
 
     private async Task<Guid> CrearReporteAsync()
@@ -57,8 +58,19 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         Assert.Equal("HUECOS_EN_LA_VIA", reporte.TipoDano);
         Assert.Equal("DEFAULT", reporte.NivelEmergencia);
         Assert.Equal("REPORTADO", reporte.Estado);
+        Assert.NotEqual(Guid.Empty, reporte.IdCoordenada);
         Assert.Null(reporte.IdResponsable);
         Assert.Null(reporte.MotivoRechazo);
+    }
+
+    [Fact]
+    public async Task CrearReporte_Devuelve400_SiLaCoordenadaEstaFueraDeBogota()
+    {
+        CrearReporteRequest fueraDeBogota = ReporteDePrueba() with { Latitud = 6.2442, Longitud = -75.5812 };
+
+        HttpResponseMessage respuesta = await _client.PostAsJsonAsync("/api/v1/Reportes", fueraDeBogota, Json);
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
     }
 
     [Fact]
@@ -201,7 +213,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     {
         HttpResponseMessage respuesta = await PostJsonAsync("""
             {"categoria":"SENALIZACION","tipoDano":"SEMAFORO_APAGADO","descripcion":"Semáforo sin luz",
-             "idCoordenada":"7d4a3c1e-2b5f-4e8a-9c0d-1f2e3a4b5c6d","urlImagen":"https://imagenes.urbanalert.com/foto.jpg"}
+             "latitud":4.6512,"longitud":-74.0561,"urlImagen":"https://imagenes.urbanalert.com/foto.jpg"}
             """);
 
         Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
@@ -221,7 +233,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     {
         HttpResponseMessage respuesta = await PostJsonAsync("""
             {"categoria":"VIAS_Y_ANDENES","tipoDano":"BACHE","descripcion":"Bache",
-             "idCoordenada":"7d4a3c1e-2b5f-4e8a-9c0d-1f2e3a4b5c6d","urlImagen":"https://imagenes.urbanalert.com/foto.jpg"}
+             "latitud":4.6512,"longitud":-74.0561,"urlImagen":"https://imagenes.urbanalert.com/foto.jpg"}
             """);
 
         Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
@@ -248,7 +260,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     {
         HttpResponseMessage respuesta = await PostJsonAsync($$"""
             {{{codigos}}},"descripcion":"Hueco",
-             "idCoordenada":"7d4a3c1e-2b5f-4e8a-9c0d-1f2e3a4b5c6d","urlImagen":"https://imagenes.urbanalert.com/foto.jpg"}
+             "latitud":4.6512,"longitud":-74.0561,"urlImagen":"https://imagenes.urbanalert.com/foto.jpg"}
             """);
 
         Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);

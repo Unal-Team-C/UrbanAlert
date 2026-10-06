@@ -15,9 +15,9 @@ public class ReporteConcurrenciaTests(ReportesApiFactory factory) : IClassFixtur
             CategoriaDano.ViasYAndenes,
             TipoDano.HuecosEnLaVia,
             "Hueco grande que afecta el tránsito vehicular",
-            Guid.NewGuid(),
             "https://imagenes.urbanalert.com/foto.jpg",
             Guid.NewGuid());
+        reporte.AsignarCoordenada(Guid.NewGuid());
 
         using (IServiceScope scopeSemilla = factory.Services.CreateScope())
         {
