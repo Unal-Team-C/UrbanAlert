@@ -6,11 +6,17 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="tests/**" />
+    <Content Remove="tests/**" />
+    <None Remove="tests/**" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="4.0.0" />
     <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.11" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageReference Include="Npgsql" Version="10.0.0" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.17.11" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\UrbanAlert.Reportes\src\Application\Application.csproj" />
