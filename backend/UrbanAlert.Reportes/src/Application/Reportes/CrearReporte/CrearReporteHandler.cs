@@ -24,6 +24,7 @@ public class CrearReporteHandler : ICrearReporteHandler
         Guid idUsuarioGenerico = Guid.NewGuid();
 
         Reporte reporte = new Reporte(
+            command.Categoria,
             command.TipoDano,
             command.Descripcion,
             command.IdCoordenada,

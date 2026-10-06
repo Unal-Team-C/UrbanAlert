@@ -2,7 +2,6 @@ namespace Domain.Reportes;
 
 public class Reporte
 {
-    public const int TipoDanoMaxLength = 200;
     public const int DescripcionMaxLength = 2000;
     public const int UrlImagenMaxLength = 2000;
     public const int MotivoRechazoMaxLength = 2000;
@@ -16,7 +15,8 @@ public class Reporte
     };
 
     public Guid Id { get; private set; }
-    public string TipoDano { get; private set; } = null!;
+    public CategoriaDano Categoria { get; private set; }
+    public TipoDano TipoDano { get; private set; }
     public string Descripcion { get; private set; } = null!;
     public Guid IdCoordenada { get; private set; }
     public string UrlImagen { get; private set; } = null!;
@@ -29,17 +29,21 @@ public class Reporte
 
     private Reporte() { }
 
-    public Reporte(string tipoDano,
+    public Reporte(CategoriaDano categoria,
+        TipoDano tipoDano,
         string descripcion,
         Guid idCoordenada,
         string urlImagen,
         Guid idUsuario)
     {
-        if (string.IsNullOrWhiteSpace(tipoDano))
-            throw new ArgumentException("El tipo de daño es obligatorio.", nameof(tipoDano));
+        if (!Enum.IsDefined(categoria))
+            throw new ArgumentException("La categoría de daño no es válida.", nameof(categoria));
 
-        if (tipoDano.Length > TipoDanoMaxLength)
-            throw new ArgumentException($"El tipo de daño no puede superar {TipoDanoMaxLength} caracteres.", nameof(tipoDano));
+        if (!Enum.IsDefined(tipoDano))
+            throw new ArgumentException("El tipo de daño no es válido.", nameof(tipoDano));
+
+        if (!CatalogoDanos.PerteneceA(tipoDano, categoria))
+            throw new ArgumentException($"El tipo de daño {tipoDano} no pertenece a la categoría {categoria}.", nameof(tipoDano));
 
         if (string.IsNullOrWhiteSpace(descripcion))
             throw new ArgumentException("La descripción es obligatoria.", nameof(descripcion));
@@ -63,6 +67,7 @@ public class Reporte
             throw new ArgumentException("El identificador del usuario es obligatorio.", nameof(idUsuario));
 
         Id = Guid.CreateVersion7();
+        Categoria = categoria;
         TipoDano = tipoDano;
         Descripcion = descripcion;
         IdCoordenada = idCoordenada;

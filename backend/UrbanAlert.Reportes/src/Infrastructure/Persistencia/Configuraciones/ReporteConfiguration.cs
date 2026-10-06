@@ -13,9 +13,15 @@ public class ReporteConfiguration : IEntityTypeConfiguration<Reporte>
         builder.HasKey(reporte => reporte.Id);
         builder.Property(reporte => reporte.Id).ValueGeneratedNever();
 
+        builder.Property(reporte => reporte.Categoria)
+            .HasConversion<string>()
+            .HasMaxLength(50)
+            .IsRequired();
+
         builder.Property(reporte => reporte.TipoDano)
-            .IsRequired()
-            .HasMaxLength(Reporte.TipoDanoMaxLength);
+            .HasConversion<string>()
+            .HasMaxLength(50)
+            .IsRequired();
 
         builder.Property(reporte => reporte.Descripcion)
             .IsRequired()

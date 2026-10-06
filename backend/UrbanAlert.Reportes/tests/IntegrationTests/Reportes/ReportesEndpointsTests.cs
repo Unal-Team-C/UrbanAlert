@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using API.DTOs.Reportes;
+using Domain.Reportes;
 
 namespace IntegrationTests.Reportes;
 
@@ -14,7 +16,8 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     }
 
     private static CrearReporteRequest ReporteDePrueba() => new(
-        "Hueco en la vía",
+        CategoriaDano.ViasYAndenes,
+        TipoDano.HuecosEnLaVia,
         "Hueco grande que afecta el tránsito vehicular",
         Guid.NewGuid(),
         "https://imagenes.urbanalert.com/foto.jpg");
@@ -41,6 +44,8 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         ReporteRespuesta? reporte = await respuestaConsulta.Content.ReadFromJsonAsync<ReporteRespuesta>();
         Assert.NotNull(reporte);
         Assert.Equal(idReporte, reporte!.Id);
+        Assert.Equal("ViasYAndenes", reporte.Categoria);
+        Assert.Equal("HuecosEnLaVia", reporte.TipoDano);
         Assert.Equal("Default", reporte.NivelEmergencia);
         Assert.Equal("Reportado", reporte.Estado);
         Assert.Null(reporte.IdResponsable);
@@ -182,6 +187,58 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         Assert.Equal(HttpStatusCode.NotFound, respuesta.StatusCode);
     }
 
+    [Fact]
+    public async Task CrearReporte_AceptaLosCodigosDelCatalogoComoTexto()
+    {
+        HttpResponseMessage respuesta = await PostJsonAsync("""
+            {"categoria":"Senalizacion","tipoDano":"SemaforoApagado","descripcion":"Semáforo sin luz",
+             "idCoordenada":"7d4a3c1e-2b5f-4e8a-9c0d-1f2e3a4b5c6d","urlImagen":"https://imagenes.urbanalert.com/foto.jpg"}
+            """);
+
+        Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
+    }
+
+    [Fact]
+    public async Task CrearReporte_Devuelve400_SiElTipoNoPerteneceALaCategoria()
+    {
+        HttpResponseMessage respuesta = await _client.PostAsJsonAsync(
+            "/api/v1/Reportes", ReporteDePrueba() with { Categoria = CategoriaDano.Aseo });
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+    }
+
+    [Fact]
+    public async Task CrearReporte_Devuelve400_SiElTipoNoExisteEnElCatalogo()
+    {
+        HttpResponseMessage respuesta = await PostJsonAsync("""
+            {"categoria":"ViasYAndenes","tipoDano":"Bache","descripcion":"Bache",
+             "idCoordenada":"7d4a3c1e-2b5f-4e8a-9c0d-1f2e3a4b5c6d","urlImagen":"https://imagenes.urbanalert.com/foto.jpg"}
+            """);
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+    }
+
+    [Fact]
+    public async Task ObtenerCatalogo_DevuelveLasCategoriasConSusTipos()
+    {
+        List<CategoriaRespuesta>? catalogo = await _client.GetFromJsonAsync<List<CategoriaRespuesta>>("/api/v1/Reportes/catalogo");
+
+        Assert.NotNull(catalogo);
+        Assert.Equal(10, catalogo!.Count);
+        CategoriaRespuesta vias = catalogo[0];
+        Assert.Equal("ViasYAndenes", vias.Codigo);
+        Assert.Equal("Vías y andenes", vias.Nombre);
+        Assert.Contains(vias.TiposDano, tipo => tipo.Codigo == "HuecosEnLaVia" && tipo.Nombre == "Huecos en la vía");
+        Assert.Equal(51, catalogo.Sum(categoria => categoria.TiposDano.Count));
+    }
+
+    private Task<HttpResponseMessage> PostJsonAsync(string json) =>
+        _client.PostAsync("/api/v1/Reportes", new StringContent(json, Encoding.UTF8, "application/json"));
+
+    private record CategoriaRespuesta(string Codigo, string Nombre, List<TipoRespuesta> TiposDano);
+
+    private record TipoRespuesta(string Codigo, string Nombre);
+
     private record CrearReporteRespuesta(Guid IdReporte, string Message);
 
     private record PaginaRespuesta(
@@ -192,6 +249,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
 
     private record ReporteRespuesta(
         Guid Id,
+        string Categoria,
         string TipoDano,
         string Descripcion,
         Guid IdCoordenada,

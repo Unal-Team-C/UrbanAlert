@@ -9,6 +9,7 @@ using Application.Interfaces.RechazarReporte;
 using Application.Reportes.ActualizarEstadoReporte;
 using Application.Reportes.ActualizarNivelEmergenciaReporte;
 using Application.Reportes.AsignarResponsableReporte;
+using Application.Reportes.Catalogo;
 using Application.Reportes.CrearReporte;
 using Application.Reportes.EliminarReporte;
 using Application.Reportes.ObtenerReportePorId;
@@ -59,8 +60,10 @@ public class ReportesController : ControllerBase
     [EndpointDescription("""
         Crea un nuevo reporte de daño urbano.
 
-        El cliente debe proporcionar el tipo de daño, descripción,
-        identificador de la coordenada y URL de la imagen.
+        El cliente debe proporcionar la categoría y el tipo de daño
+        (códigos de GET /api/v1/Reportes/catalogo; el tipo debe
+        pertenecer a la categoría), descripción, identificador de
+        la coordenada y URL de la imagen.
 
         La fecha de creación, el identificador del reporte, el
         nivel de emergencia inicial y el usuario (genérico mientras
@@ -75,6 +78,7 @@ public class ReportesController : ControllerBase
         CancellationToken cancellationToken)
     {
         CrearReporteCommand command = new CrearReporteCommand(
+            request.Categoria,
             request.TipoDano,
             request.Descripcion,
             request.IdCoordenada,
@@ -90,6 +94,18 @@ public class ReportesController : ControllerBase
                 message = "Reporte creado"
             });
     }
+
+    [HttpGet("catalogo")]
+    [EndpointSummary("Obtener el catálogo de daños")]
+    [EndpointDescription("""
+        Obtiene las categorías de daño con sus tipos de daño.
+
+        Los códigos son los valores que se envían en "categoria" y
+        "tipoDano" al crear un reporte; los nombres son los textos
+        para mostrar al usuario.
+        """)]
+    [ProducesResponseType<IReadOnlyList<CategoriaDanoDto>>(StatusCodes.Status200OK)]
+    public IActionResult ObtenerCatalogo() => Ok(CategoriaDanoDto.DesdeCatalogo());
 
     [HttpGet]
     [EndpointSummary("Obtener reportes")]
