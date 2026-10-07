@@ -72,9 +72,12 @@ public class ReportesController : ControllerBase
         se guarda en el reporte. Si Geoespacial no está disponible,
         el reporte no se crea (503).
 
-        La fecha de creación, el identificador del reporte, el
-        nivel de emergencia inicial y el usuario (genérico mientras
-        no exista autenticación) son establecidos internamente
+        idUsuario es el usuario que crea el reporte. Mientras no exista
+        autenticación lo envía el cliente; es opcional y, si no llega,
+        se asigna un usuario genérico.
+
+        La fecha de creación, el identificador del reporte y el
+        nivel de emergencia inicial son establecidos internamente
         por el servicio.
         """)]
     [ProducesResponseType(StatusCodes.Status201Created)]
@@ -90,7 +93,8 @@ public class ReportesController : ControllerBase
             request.Descripcion,
             request.Latitud,
             request.Longitud,
-            request.UrlImagen);
+            request.UrlImagen,
+            IdUsuario: request.IdUsuario);
 
         Guid idReporte = await _crearReporteHandler.Handle(command, cancellationToken);
 
@@ -109,8 +113,8 @@ public class ReportesController : ControllerBase
     [EndpointDescription("""
         Igual que crear un reporte, pero la imagen se sube como archivo
         en lugar de enviar su URL. Se envía como multipart/form-data con
-        los campos categoria, tipo, descripcion, latitud, longitud e
-        imagen (JPEG, PNG o WebP de hasta 10 MB; el formato se valida
+        los campos categoria, tipo, descripcion, latitud, longitud,
+        idUsuario (opcional) e imagen (JPEG, PNG o WebP de hasta 10 MB; el formato se valida
         por el contenido del archivo).
 
         Reportes recibe el archivo junto con el reporte. Por ahora solo
@@ -138,7 +142,8 @@ public class ReportesController : ControllerBase
             request.Latitud,
             request.Longitud,
             UrlImagen: null,
-            new ImagenAdjunta(imagen, request.Imagen.Length, request.Imagen.FileName));
+            new ImagenAdjunta(imagen, request.Imagen.Length, request.Imagen.FileName),
+            request.IdUsuario);
 
         Guid idReporte = await _crearReporteHandler.Handle(command, cancellationToken);
 

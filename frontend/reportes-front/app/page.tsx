@@ -13,6 +13,7 @@ import {
   type Coordenada,
   type Ubicacion,
 } from "./lib/ubicacion";
+import { elegirCiudadanoAlAzar, type Usuario } from "./lib/usuarios";
 
 // Línea entre la opción inicial ("Seleccione...") y las opciones reales.
 const SEPARADOR = "──────────────────────";
@@ -63,6 +64,10 @@ export default function Home() {
   const [catalogError, setCatalogError] = useState("");
   const [loadingCatalog, setLoadingCatalog] = useState(true);
 
+  // Quién crea el reporte. Si no se puede obtener, Reportes asigna un usuario genérico.
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [usuarioError, setUsuarioError] = useState("");
+
   useEffect(() => {
     fetch("/api/reportes/catalogo")
       .then((response) => {
@@ -78,6 +83,24 @@ export default function Home() {
         )
       )
       .finally(() => setLoadingCatalog(false));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/usuarios")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json() as Promise<Usuario[]>;
+      })
+      .then((usuarios) => {
+        const elegido = elegirCiudadanoAlAzar(usuarios);
+        if (!elegido) throw new Error("Sin usuarios con rol USER");
+        setUsuario(elegido);
+      })
+      .catch(() =>
+        setUsuarioError("No fue posible obtener un usuario: el reporte se creará con un usuario genérico.")
+      );
   }, []);
 
   const selectedCategory = categories.find(
@@ -204,6 +227,7 @@ export default function Home() {
     reportData.append("descripcion", form.description);
     reportData.append("latitud", String(location.lat));
     reportData.append("longitud", String(location.lon));
+    if (usuario) reportData.append("idUsuario", usuario.id);
     reportData.append("imagen", image);
 
     try {
@@ -246,6 +270,16 @@ export default function Home() {
         <p className="mt-2 mb-6 text-gray-500">
           Complete la información del daño reportado.
         </p>
+
+        {usuario && (
+          <p className="-mt-4 mb-6 text-sm text-gray-500">
+            Reportando como <span className="font-medium text-gray-700">{usuario.name}</span>
+          </p>
+        )}
+
+        {usuarioError && (
+          <p className="-mt-4 mb-6 text-sm text-amber-700">{usuarioError}</p>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
 

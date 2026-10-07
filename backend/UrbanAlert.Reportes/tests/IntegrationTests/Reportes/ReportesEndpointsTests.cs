@@ -243,7 +243,8 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     private static readonly byte[] ImagenPng = Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
 
-    private static MultipartFormDataContent FormularioConImagen(byte[]? imagen, string nombreArchivo = "foto.png")
+    private static MultipartFormDataContent FormularioConImagen(
+        byte[]? imagen, string nombreArchivo = "foto.png", string? idUsuario = null)
     {
         MultipartFormDataContent formulario = new()
         {
@@ -253,6 +254,9 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
             { new StringContent("4.6512"), "latitud" },
             { new StringContent("-74.0561"), "longitud" },
         };
+
+        if (idUsuario is not null)
+            formulario.Add(new StringContent(idUsuario), "idUsuario");
 
         if (imagen is not null)
         {
@@ -275,6 +279,45 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
 
         Assert.Equal("hueco.png", reporte!.NombreImagen);
         Assert.Null(reporte.UrlImagen);
+    }
+
+    [Fact]
+    public async Task CrearReporte_ConJson_GuardaElUsuarioEnviado()
+    {
+        Guid idUsuario = Guid.CreateVersion7();
+        HttpResponseMessage respuesta = await _client.PostAsJsonAsync(
+            "/api/v1/Reportes", ReporteDePrueba() with { IdUsuario = idUsuario }, Json);
+        Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
+        CrearReporteRespuesta? creado = await respuesta.Content.ReadFromJsonAsync<CrearReporteRespuesta>();
+
+        ReporteRespuesta? reporte = await _client.GetFromJsonAsync<ReporteRespuesta>($"/api/v1/Reportes/{creado!.IdReporte}");
+
+        Assert.Equal(idUsuario, reporte!.IdUsuario);
+    }
+
+    [Fact]
+    public async Task CrearReporte_ConArchivo_GuardaElUsuarioEnviado()
+    {
+        Guid idUsuario = Guid.CreateVersion7();
+        HttpResponseMessage respuesta = await _client.PostAsync(
+            "/api/v1/Reportes", FormularioConImagen(ImagenPng, idUsuario: idUsuario.ToString()));
+        Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
+        CrearReporteRespuesta? creado = await respuesta.Content.ReadFromJsonAsync<CrearReporteRespuesta>();
+
+        ReporteRespuesta? reporte = await _client.GetFromJsonAsync<ReporteRespuesta>($"/api/v1/Reportes/{creado!.IdReporte}");
+
+        Assert.Equal(idUsuario, reporte!.IdUsuario);
+    }
+
+    [Theory]
+    [InlineData("no-es-un-guid")]
+    [InlineData("00000000-0000-0000-0000-000000000000")]
+    public async Task CrearReporte_ConArchivo_Devuelve400_SiElUsuarioNoEsValido(string idUsuario)
+    {
+        HttpResponseMessage respuesta = await _client.PostAsync(
+            "/api/v1/Reportes", FormularioConImagen(ImagenPng, idUsuario: idUsuario));
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
     }
 
     [Fact]
