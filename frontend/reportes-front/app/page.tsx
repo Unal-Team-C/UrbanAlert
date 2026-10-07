@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { IconoCamara, IconoMapa, IconoUbicacion } from "./components/Iconos";
+import { IconoCamara, IconoMapa, IconoUbicacion, IconoUsuario } from "./components/Iconos";
 import ReporteCreadoModal from "./components/ReporteCreadoModal";
 import SeleccionUbicacionModal from "./components/SeleccionUbicacionModal";
+import UsuarioModal from "./components/UsuarioModal";
 import { TIPOS_IMAGEN, formatearTamano, validarImagen } from "./lib/imagen";
 import {
   dentroDeBogota,
@@ -13,7 +14,12 @@ import {
   type Coordenada,
   type Ubicacion,
 } from "./lib/ubicacion";
-import { elegirCiudadanoAlAzar, type Usuario } from "./lib/usuarios";
+import {
+  elegirCiudadanoAlAzar,
+  guardarUsuario,
+  leerUsuarioGuardado,
+  type Usuario,
+} from "./lib/usuarios";
 
 // Línea entre la opción inicial ("Seleccione...") y las opciones reales.
 const SEPARADOR = "──────────────────────";
@@ -65,8 +71,10 @@ export default function Home() {
   const [loadingCatalog, setLoadingCatalog] = useState(true);
 
   // Quién crea el reporte. Si no se puede obtener, Reportes asigna un usuario genérico.
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [usuarioError, setUsuarioError] = useState("");
+  const [usuarioModalOpen, setUsuarioModalOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/reportes/catalogo")
@@ -93,8 +101,10 @@ export default function Home() {
         }
         return response.json() as Promise<Usuario[]>;
       })
-      .then((usuarios) => {
-        const elegido = elegirCiudadanoAlAzar(usuarios);
+      .then((lista) => {
+        setUsuarios(lista);
+        const guardado = lista.find((u) => u.id === leerUsuarioGuardado());
+        const elegido = guardado ?? elegirCiudadanoAlAzar(lista);
         if (!elegido) throw new Error("Sin usuarios con rol USER");
         setUsuario(elegido);
       })
@@ -259,9 +269,32 @@ export default function Home() {
   }, [imagePreview]);
 
   const closeModal = useCallback(() => setCreatedId(null), []);
+  const closeUsuarioModal = useCallback(() => setUsuarioModalOpen(false), []);
+
+  function seleccionarUsuario(elegido: Usuario) {
+    setUsuario(elegido);
+    setUsuarioError("");
+    guardarUsuario(elegido.id);
+    setUsuarioModalOpen(false);
+  }
+
+  function agregarUsuario(nuevo: Usuario) {
+    setUsuarios((lista) => [...lista, nuevo]);
+    seleccionarUsuario(nuevo);
+  }
 
   return (
-    <main className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
+    <main className="relative min-h-screen bg-gray-100 flex items-center justify-center p-6 pt-20 sm:pt-6">
+      <button
+        type="button"
+        onClick={() => setUsuarioModalOpen(true)}
+        title="Cambiar o agregar usuario"
+        className="absolute right-4 top-4 flex items-center gap-2 rounded-full bg-white py-2 pl-2 pr-4 text-sm font-medium text-gray-700 shadow hover:bg-gray-50"
+      >
+        <IconoUsuario className="h-7 w-7 text-gray-600" />
+        <span className="max-w-[10rem] truncate">{usuario?.name ?? "Usuario"}</span>
+      </button>
+
       <div className="w-full max-w-xl rounded-xl bg-white p-8 shadow-lg">
         <h1 className="text-3xl font-bold text-gray-900">
           Crear reporte
@@ -500,6 +533,17 @@ export default function Home() {
       </div>
 
       {createdId && <ReporteCreadoModal idReporte={createdId} onClose={closeModal} />}
+
+      {usuarioModalOpen && (
+        <UsuarioModal
+          usuarios={usuarios}
+          actual={usuario}
+          error={usuarios.length === 0 ? "No fue posible cargar los usuarios." : ""}
+          onSeleccionar={seleccionarUsuario}
+          onCrear={agregarUsuario}
+          onCerrar={closeUsuarioModal}
+        />
+      )}
 
       {mapOpen && (
         <SeleccionUbicacionModal inicial={location} onGuardar={saveMapLocation} onCerrar={closeMap} />
