@@ -31,6 +31,19 @@ Las credenciales tienen valores por defecto **solo para desarrollo**. Para cambi
 
 Cualquier otra ruta bajo `/api/` responde 404. La configuración está en `gateway/default.conf.template`.
 
+### Documentación de las APIs
+
+Índice en `/docs/` (por ejemplo http://localhost:8080/docs/ o la URL del túnel + `/docs/`):
+
+| Ruta | Documentación |
+|---|---|
+| `/docs/reportes` | Scalar de Reportes |
+| `/docs/auditoria` | Scalar de Auditoria |
+| `/docs/usuarios` | Swagger UI de Usuarios |
+| `/docs/geoespacial` | Swagger UI de Geoespacial |
+
+El gateway quita el prefijo `/docs/<servicio>` y reescribe las URLs absolutas que generan los servicios, así que "probar" desde la documentación funciona y llega a las mismas rutas que ya publica `/api/v1/*` (en Geoespacial, solo `GET /reports`). Scalar de Reportes y Auditoria solo existe con `ASPNETCORE_ENVIRONMENT=Development`, que es lo que usa este compose.
+
 ## Aislamiento
 
 Solo el gateway publica un puerto en el host (`GATEWAY_PORT`, por defecto 8080). Redes de Docker:

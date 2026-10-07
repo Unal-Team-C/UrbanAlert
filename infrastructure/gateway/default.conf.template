@@ -12,6 +12,10 @@ server {
     # Reportes acepta imágenes de hasta 10 MB en multipart/form-data, más el resto de campos.
     client_max_body_size 11m;
 
+    # Redirecciones relativas: detrás del puerto publicado o de Cloudflare, nginx no conoce
+    # el host ni el puerto públicos.
+    absolute_redirect off;
+
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -56,6 +60,91 @@ server {
         rewrite ^/api/v1/auditoria(.*)$ /auditoria$1 break;
         proxy_set_header X-Urban-Gateway-Key "${GATEWAY_SHARED_SECRET}";
         proxy_pass $auditoria;
+    }
+
+    # ---------------------------------------------------------------- Documentación
+    # Scalar (Reportes, Auditoria) y Swagger UI (Usuarios, Geoespacial) en /docs/<servicio>.
+    # El gateway quita el prefijo y reescribe las URLs absolutas que generan los servicios
+    # (servidor del OpenAPI y configuración de Swagger UI) para que queden bajo el prefijo.
+    # Así "probar" desde la documentación también pasa por /docs/<servicio>, solo hacia las
+    # mismas rutas que el gateway ya publica en /api/v1/*.
+    location = /docs {
+        return 301 /docs/;
+    }
+
+    location = /docs/ {
+        default_type text/html;
+        return 200 '<!doctype html><html lang="es"><head><meta charset="utf-8"><title>UrbanAlert - Documentación</title></head>
+<body><h1>Documentación de las APIs</h1><ul>
+<li><a href="/docs/reportes">Reportes</a> (Scalar)</li>
+<li><a href="/docs/auditoria">Auditoría</a> (Scalar)</li>
+<li><a href="/docs/usuarios">Usuarios</a> (Swagger UI)</li>
+<li><a href="/docs/geoespacial">Geoespacial</a> (Swagger UI)</li>
+</ul></body></html>';
+    }
+
+    location = /docs/reportes    { return 302 /docs/reportes/scalar/v1; }
+    location = /docs/auditoria   { return 302 /docs/auditoria/scalar/v1; }
+    location = /docs/usuarios    { return 302 /docs/usuarios/swagger-ui/index.html; }
+    location = /docs/geoespacial { return 302 /docs/geoespacial/docs; }
+
+    location ~ ^/docs/reportes/(scalar|openapi|api/v1/Reportes)(/|$) {
+        set $reportes http://reportes:8080;
+        rewrite ^/docs/reportes(/.*)$ $1 break;
+        sub_filter_types application/json;
+        sub_filter_once off;
+        sub_filter '"http://$host/"' '"/docs/reportes"';
+        proxy_pass $reportes;
+    }
+
+    location ~ ^/docs/auditoria/(scalar|openapi|auditoria)(/|$) {
+        set $auditoria http://auditoria:8080;
+        rewrite ^/docs/auditoria(/.*)$ $1 break;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Urban-Gateway-Key "${GATEWAY_SHARED_SECRET}";
+        sub_filter_types application/json;
+        sub_filter_once off;
+        sub_filter '"http://$host/"' '"/docs/auditoria"';
+        proxy_pass $auditoria;
+    }
+
+    location ~ ^/docs/usuarios/(swagger-ui/|v3/api-docs|api/v1/users(/|$)) {
+        set $usuarios http://usuarios:8080;
+        rewrite ^/docs/usuarios(/.*)$ $1 break;
+        proxy_redirect / /docs/usuarios/;
+        sub_filter_types application/json text/javascript;
+        sub_filter_once off;
+        sub_filter '"http://$host' '"/docs/usuarios';
+        sub_filter '"/v3/api-docs' '"/docs/usuarios/v3/api-docs';
+        proxy_pass $usuarios;
+    }
+
+    # Solo la consulta del mapa, igual que en /api/v1/geoespacial/reports. FastAPI no declara
+    # servidores en su OpenAPI: se agrega uno para que "probar" use el prefijo.
+    location ~ ^/docs/geoespacial/(docs|openapi\.json)$ {
+        set $geoespacial http://geoespacial-api:8000;
+        rewrite ^/docs/geoespacial(/.*)$ $1 break;
+        sub_filter_types application/json;
+        sub_filter_once on;
+        sub_filter "'/openapi.json'" "'/docs/geoespacial/openapi.json'";
+        sub_filter '"info":{' '"servers":[{"url":"/docs/geoespacial"}],"info":{';
+        proxy_pass $geoespacial;
+    }
+
+    location = /docs/geoespacial/api/v1/geospatial/reports {
+        limit_except GET {
+            deny all;
+        }
+        set $geoespacial http://geoespacial-api:8000;
+        rewrite ^ /api/v1/geospatial/reports break;
+        proxy_pass $geoespacial;
+    }
+
+    location /docs/ {
+        return 404;
     }
 
     # Cualquier otra ruta de API no existe hacia afuera.
