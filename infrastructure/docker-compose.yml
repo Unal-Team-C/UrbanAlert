@@ -128,6 +128,9 @@ services:
       # Development: no exige Cognito para arrancar. Sí exige la clave del gateway.
       ASPNETCORE_ENVIRONMENT: Development
       Gateway__SharedSecret: ${GATEWAY_SHARED_SECRET:-urbanalert-gateway-local}
+      # Modo de desarrollo sin Cognito: identidad por headers X-Usuario-Id / X-Usuario-Rol
+      # (por defecto admin). Apagado salvo AUDITORIA_MODO_DESARROLLO=true en el .env.
+      Autenticacion__ModoDesarrollo: ${AUDITORIA_MODO_DESARROLLO:-false}
       ConnectionStrings__AuditWriter: Host=postgres-reportes;Port=5432;Database=urbanalert_auditoria;Username=audit_writer;Password=${AUDIT_WRITER_PASSWORD:-audit_writer}
       ConnectionStrings__AuditReader: Host=postgres-reportes;Port=5432;Database=urbanalert_auditoria;Username=audit_reader;Password=${AUDIT_READER_PASSWORD:-audit_reader}
       ConnectionStrings__CorePostgres: Host=postgres-reportes;Port=5432;Database=urbanalert_reportes;Username=reportes_reader;Password=${REPORTES_READER_PASSWORD:-reportes_reader}

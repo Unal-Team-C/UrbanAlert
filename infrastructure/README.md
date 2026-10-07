@@ -128,7 +128,7 @@ Requiere una cuenta de Cloudflare y un dominio administrado en ella.
 
 - **Reportes y Auditoria** corren con `ASPNETCORE_ENVIRONMENT=Development`. Así:
   - Reportes aplica sus migraciones al arrancar y expone Scalar;
-  - Auditoria arranca sin Cognito. Sus endpoints siguen pidiendo un JWT, así que sin token responden 401, aunque la petición pase por el gateway.
+  - Auditoria arranca sin Cognito. Sus endpoints siguen pidiendo un JWT, así que sin token responden 401, aunque la petición pase por el gateway. Con `AUDITORIA_MODO_DESARROLLO=true` en el `.env` aceptan la identidad en los headers `X-Usuario-Id` y `X-Usuario-Rol` (por defecto, admin); ver el README de Auditoria. Cualquiera que llegue al gateway puede elegir su identidad.
 - **`postgres-reportes/01-auditoria.sh`** se ejecuta solo con el volumen vacío:
   - crea la base de Auditoria y los roles `audit_writer`, `audit_reader` y `reportes_reader`;
   - aplica `backend/UrbanAlert.Auditoria/database/001_audit_store.sql`;
