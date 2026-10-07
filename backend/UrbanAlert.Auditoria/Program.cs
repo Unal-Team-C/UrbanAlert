@@ -3,8 +3,10 @@ using System.Text;
 using Amazon;
 using Amazon.S3;
 using MassTransit;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
 using UrbanAlert.Auditoria;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -14,8 +16,19 @@ string? appClientId = builder.Configuration["Cognito:AppClientId"];
 if (!builder.Environment.IsDevelopment() && (string.IsNullOrWhiteSpace(issuer) || string.IsNullOrWhiteSpace(appClientId)))
     throw new InvalidOperationException("Cognito:Issuer y Cognito:AppClientId son obligatorios fuera de Development.");
 
+// Modo de desarrollo sin Cognito (AutenticacionDesarrolloHandler). Nunca fuera de Development.
+bool modoDesarrollo = builder.Configuration.GetValue<bool>("Autenticacion:ModoDesarrollo");
+if (modoDesarrollo && !builder.Environment.IsDevelopment())
+    throw new InvalidOperationException("Autenticacion:ModoDesarrollo solo se permite en Development.");
+const string EsquemaJwtODesarrollo = "JwtODesarrollo";
+
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    // En modo de desarrollo, Scalar muestra los headers que reemplazan al token de Cognito.
+    if (modoDesarrollo)
+        options.AddOperationTransformer(AutenticacionDesarrolloHandler.DocumentarHeadersAsync);
+});
 builder.Services.AddSingleton<IAuditStore, AuditStore>();
 builder.Services.AddSingleton<IAuditAuthorizationService, AuditAuthorizationService>();
 builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
@@ -43,7 +56,8 @@ builder.Services.AddSingleton<IAuditArchive>(services =>
 
     return new S3AuditArchive(new AmazonS3Client(s3Configuration), bucket, retentionDays);
 });
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+AuthenticationBuilder autenticacion = builder.Services
+    .AddAuthentication(modoDesarrollo ? EsquemaJwtODesarrollo : JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.Authority = issuer;
@@ -72,6 +86,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             }
         };
     });
+if (modoDesarrollo)
+{
+    // Con Authorization: Bearer se valida el token de Cognito como siempre; sin él, se usan los
+    // headers de desarrollo.
+    autenticacion
+        .AddScheme<AuthenticationSchemeOptions, AutenticacionDesarrolloHandler>(AutenticacionDesarrolloHandler.Esquema, null)
+        .AddPolicyScheme(EsquemaJwtODesarrollo, null, options => options.ForwardDefaultSelector = context =>
+            context.Request.Headers.Authorization.Count > 0
+                ? JwtBearerDefaults.AuthenticationScheme
+                : AutenticacionDesarrolloHandler.Esquema);
+}
 builder.Services.AddAuthorization();
 
 if (builder.Configuration.GetValue<bool>("RabbitMq:Enabled"))
@@ -92,6 +117,7 @@ if (builder.Configuration.GetValue<bool>("RabbitMq:Enabled"))
                 host.Username(username);
                 host.Password(password);
             });
+            bus.ConfigureJsonSerializerOptions(CodigosEnum.ConfigurarMensajeria);
             bus.ReceiveEndpoint(queue, endpoint =>
             {
                 endpoint.UseMessageRetry(retry => retry.Intervals(
@@ -104,8 +130,16 @@ if (builder.Configuration.GetValue<bool>("RabbitMq:Enabled"))
 
 WebApplication app = builder.Build();
 
+if (modoDesarrollo)
+    app.Logger.LogWarning(
+        "Modo de desarrollo sin Cognito: sin token, la identidad se toma de {HeaderUsuario} y {HeaderRol} (por defecto, admin).",
+        AutenticacionDesarrolloHandler.HeaderUsuario, AutenticacionDesarrolloHandler.HeaderRol);
+
 if (app.Environment.IsDevelopment())
+{
     app.MapOpenApi();
+    app.MapScalarApiReference();
+}
 
 app.Use(async (context, next) =>
 {

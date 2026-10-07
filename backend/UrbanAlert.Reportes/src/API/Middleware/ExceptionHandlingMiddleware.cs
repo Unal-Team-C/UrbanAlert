@@ -1,4 +1,5 @@
 using System.Net;
+using Application.Geoespacial;
 using Domain.Reportes;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,6 +17,23 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         {
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             await context.Response.WriteAsJsonAsync(new { message = ex.Message });
+        }
+        catch (GeoespacialNoDisponibleException ex)
+        {
+            logger.LogWarning(ex, "No fue posible registrar la ubicación en Geoespacial.");
+            context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+            await context.Response.WriteAsJsonAsync(new { message = "No fue posible registrar la ubicación del reporte. Intenta nuevamente más tarde." });
+        }
+        catch (BadHttpRequestException ex)
+        {
+            // Errores de la petición que detecta Kestrel, p. ej. 413 si el cuerpo supera el límite.
+            context.Response.StatusCode = ex.StatusCode;
+            await context.Response.WriteAsJsonAsync(new
+            {
+                message = ex.StatusCode == StatusCodes.Status413PayloadTooLarge
+                    ? "La petición supera el tamaño máximo permitido."
+                    : "La petición no es válida."
+            });
         }
         catch (DbUpdateConcurrencyException ex)
         {

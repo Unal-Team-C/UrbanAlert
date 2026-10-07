@@ -4,11 +4,15 @@ namespace UnitTests.Domain.Reportes;
 
 public class ReporteTests
 {
+    private const CategoriaReporte Categoria = CategoriaReporte.ViasYAndenes;
+    private const TipoReporte Tipo = TipoReporte.HuecosEnLaVia;
+
     private static Reporte CrearReporteValido() => new(
-        "Hueco en la vía",
+        Categoria,
+        Tipo,
         "Hueco grande que afecta el tránsito vehicular",
-        Guid.NewGuid(),
         "https://imagenes.urbanalert.com/foto.jpg",
+        null,
         Guid.NewGuid());
 
     [Fact]
@@ -22,6 +26,8 @@ public class ReporteTests
 
         Assert.NotEqual(Guid.Empty, reporte.Id);
         Assert.Equal(7, reporte.Id.Version);
+        Assert.Equal(Categoria, reporte.Categoria);
+        Assert.Equal(Tipo, reporte.Tipo);
         Assert.Equal(NivelEmergencia.Default, reporte.NivelEmergencia);
         Assert.Equal(EstadoReporte.Reportado, reporte.Estado);
         Assert.Null(reporte.IdResponsable);
@@ -30,38 +36,105 @@ public class ReporteTests
     }
 
     [Theory]
-    [InlineData("", "descripcion", "url")]
-    [InlineData("tipo", "", "url")]
-    [InlineData("tipo", "descripcion", "")]
-    public void Constructor_LanzaExcepcion_SiCamposDeTextoObligatoriosEstanVacios(string tipoDano, string descripcion, string urlImagen)
+    [InlineData("", "url")]
+    [InlineData("descripcion", "")]
+    public void Constructor_LanzaExcepcion_SiCamposDeTextoObligatoriosEstanVacios(string descripcion, string urlImagen)
     {
-        Assert.Throws<ArgumentException>(() => new Reporte(tipoDano, descripcion, Guid.NewGuid(), urlImagen, Guid.NewGuid()));
+        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, descripcion, urlImagen, null, Guid.NewGuid()));
     }
 
     [Fact]
-    public void Constructor_LanzaExcepcion_SiIdCoordenadaEsVacio()
+    public void Constructor_LanzaExcepcion_SiElTipoNoPerteneceALaCategoria()
     {
-        Assert.Throws<ArgumentException>(() => new Reporte("tipo", "descripcion", Guid.Empty, "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
+        Assert.Throws<ArgumentException>(() => new Reporte(
+            CategoriaReporte.Aseo, TipoReporte.HuecosEnLaVia, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", null, Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void Constructor_LanzaExcepcion_SiLaCategoriaNoExiste()
+    {
+        Assert.Throws<ArgumentException>(() => new Reporte(
+            (CategoriaReporte)99, Tipo, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", null, Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void Constructor_LanzaExcepcion_SiElTipoNoExiste()
+    {
+        Assert.Throws<ArgumentException>(() => new Reporte(
+            Categoria, (TipoReporte)99, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", null, Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void Constructor_DejaElReporteSinCoordenada()
+    {
+        Reporte reporte = CrearReporteValido();
+
+        Assert.Equal(Guid.Empty, reporte.IdCoordenada);
+    }
+
+    [Fact]
+    public void AsignarCoordenada_GuardaElIdentificador()
+    {
+        Reporte reporte = CrearReporteValido();
+        Guid idCoordenada = Guid.NewGuid();
+
+        reporte.AsignarCoordenada(idCoordenada);
+
+        Assert.Equal(idCoordenada, reporte.IdCoordenada);
+    }
+
+    [Fact]
+    public void AsignarCoordenada_LanzaExcepcion_SiIdCoordenadaEsVacio()
+    {
+        Reporte reporte = CrearReporteValido();
+
+        Assert.Throws<ArgumentException>(() => reporte.AsignarCoordenada(Guid.Empty));
+    }
+
+    [Fact]
+    public void AsignarCoordenada_LanzaExcepcion_SiYaTieneCoordenada()
+    {
+        Reporte reporte = CrearReporteValido();
+        reporte.AsignarCoordenada(Guid.NewGuid());
+
+        Assert.Throws<InvalidOperationException>(() => reporte.AsignarCoordenada(Guid.NewGuid()));
     }
 
     [Fact]
     public void Constructor_LanzaExcepcion_SiIdUsuarioEsVacio()
     {
-        Assert.Throws<ArgumentException>(() => new Reporte("tipo", "descripcion", Guid.NewGuid(), "https://imagenes.urbanalert.com/foto.jpg", Guid.Empty));
+        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", null, Guid.Empty));
+    }
+
+    [Fact]
+    public void Constructor_AceptaSoloElNombreDeLaImagen_SinUrl()
+    {
+        Reporte reporte = new(Categoria, Tipo, "descripcion", null, "foto.jpg", Guid.NewGuid());
+
+        Assert.Null(reporte.UrlImagen);
+        Assert.Equal("foto.jpg", reporte.NombreImagen);
+    }
+
+    [Fact]
+    public void Constructor_LanzaExcepcion_SiNoHayNiUrlNiNombreDeImagen()
+    {
+        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, "descripcion", null, null, Guid.NewGuid()));
+        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, "descripcion", " ", "", Guid.NewGuid()));
+    }
+
+    [Theory]
+    [InlineData("carpeta/foto.jpg")]
+    [InlineData("..\\foto.jpg")]
+    [InlineData("..")]
+    public void Constructor_LanzaExcepcion_SiElNombreDeImagenEsUnaRuta(string nombreImagen)
+    {
+        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, "descripcion", null, nombreImagen, Guid.NewGuid()));
     }
 
     [Fact]
     public void Constructor_LanzaExcepcion_SiUrlImagenNoEsAbsoluta()
     {
-        Assert.Throws<ArgumentException>(() => new Reporte("tipo", "descripcion", Guid.NewGuid(), "no-es-una-url", Guid.NewGuid()));
-    }
-
-    [Fact]
-    public void Constructor_LanzaExcepcion_SiTipoDanoSuperaLaLongitudMaxima()
-    {
-        string tipoDano = new('a', Reporte.TipoDanoMaxLength + 1);
-
-        Assert.Throws<ArgumentException>(() => new Reporte(tipoDano, "descripcion", Guid.NewGuid(), "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
+        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, "descripcion", "no-es-una-url", null, Guid.NewGuid()));
     }
 
     [Fact]
@@ -69,7 +142,7 @@ public class ReporteTests
     {
         string descripcion = new('a', Reporte.DescripcionMaxLength + 1);
 
-        Assert.Throws<ArgumentException>(() => new Reporte("tipo", descripcion, Guid.NewGuid(), "https://imagenes.urbanalert.com/foto.jpg", Guid.NewGuid()));
+        Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, descripcion, "https://imagenes.urbanalert.com/foto.jpg", null, Guid.NewGuid()));
     }
 
     [Theory]

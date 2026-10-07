@@ -27,7 +27,7 @@ public sealed class DotNetReportAuditTests
         Assert.Equal(actorId, auditEvent.ActorId);
         Assert.Null(auditEvent.CorrelationId);
         Assert.Equal(coordinateId, auditEvent.Data.GetProperty("idCoordenada").GetGuid());
-        Assert.Equal("Reportado", auditEvent.Data.GetProperty("estado").GetString());
+        Assert.Equal("REPORTADO", auditEvent.Data.GetProperty("estado").GetString());
         Assert.Equal(JsonValueKind.Null, auditEvent.Payload.GetProperty("correlationId").ValueKind);
     }
 

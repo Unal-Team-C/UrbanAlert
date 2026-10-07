@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+**/.idea/
+**/.vs/
+**/tests/
+**/node_modules/
+UrbanAlert.Geoespacial/
+UrbanAlert.Usuarios/
+UrbanAlert.Obras/
+UrbanAlert.Notificaciones/

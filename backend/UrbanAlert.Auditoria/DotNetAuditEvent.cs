@@ -26,7 +26,7 @@ public static class DotNetAuditEventFactory
         {
             actorId = message.Reporte.IdUsuario,
             idCoordenada = message.Reporte.IdCoordenada,
-            estado = message.Reporte.Estado.ToString()
+            estado = CodigosEnum.ACodigo(message.Reporte.Estado)
         };
         object payload = new
         {

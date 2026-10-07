@@ -1,5 +1,9 @@
+using System.Text.Json.Serialization;
+using Application.Comun;
 using Application.Interfaces.Eventos;
+using Application.Interfaces.Geoespacial;
 using Application.Interfaces.Reportes;
+using Infrastructure.Geoespacial;
 using Infrastructure.Mensajeria;
 using Infrastructure.Persistencia;
 using Infrastructure.Persistencia.Repositorios;
@@ -21,9 +25,26 @@ public static class DependencyInjection
 
         services.AddScoped<IReporteRepository, ReporteRepository>();
 
+        AgregarGeoespacial(services, configuration);
         AgregarMassTransit(services, configuration);
 
         return services;
+    }
+
+    private static void AgregarGeoespacial(IServiceCollection services, IConfiguration configuration)
+    {
+        string? baseUrl = configuration["Geoespacial:BaseUrl"];
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            throw new InvalidOperationException("No se encontró la configuración 'Geoespacial:BaseUrl'.");
+
+        // Timeout corto: la llamada es síncrona dentro de la creación del reporte.
+        int timeoutSegundos = configuration.GetValue<int?>("Geoespacial:TimeoutSegundos") ?? 3;
+
+        services.AddHttpClient<IGeoespacialClient, GeoespacialHttpClient>(client =>
+        {
+            client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(timeoutSegundos);
+        });
     }
 
     private static void AgregarMassTransit(IServiceCollection services, IConfiguration configuration)
@@ -44,6 +65,14 @@ public static class DependencyInjection
                 {
                     h.Username(usuario);
                     h.Password(contrasena);
+                });
+
+                // Los eventos usan la misma convención que la API: enums como códigos
+                // UPPER_SNAKE_CASE ("REPORTADO"); sin esto MassTransit los envía como números.
+                cfg.ConfigureJsonSerializerOptions(opciones =>
+                {
+                    opciones.Converters.Insert(0, new JsonStringEnumConverter(CodigoEnum.Politica, allowIntegerValues: false));
+                    return opciones;
                 });
             });
         });

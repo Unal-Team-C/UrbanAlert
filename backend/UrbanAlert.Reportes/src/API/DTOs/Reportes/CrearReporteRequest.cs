@@ -1,8 +1,12 @@
+using Domain.Reportes;
+
 namespace API.DTOs.Reportes;
 
 public record CrearReporteRequest(
-    string TipoDano,
+    CategoriaReporte Categoria,
+    TipoReporte Tipo,
     string Descripcion,
-    Guid IdCoordenada,
-    string UrlImagen);
-
+    double Latitud,
+    double Longitud,
+    string UrlImagen,
+    Guid? IdUsuario = null);

@@ -48,7 +48,7 @@ public sealed class S3AuditArchive(IAmazonS3 s3, string bucket, int retentionDay
             Key = key,
             InputStream = stream,
             ContentType = "application/json",
-            ObjectLockMode = ObjectLockMode.COMPLIANCE,
+            ObjectLockMode = ObjectLockMode.Compliance,
             ObjectLockRetainUntilDate = DateTime.UtcNow.AddDays(retentionDays)
         }, cancellationToken);
     }

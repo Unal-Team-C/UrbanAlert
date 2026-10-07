@@ -1,3 +1,4 @@
+using Application.Imagenes;
 using Application.Interfaces.ActualizarEstadoReporte;
 using Application.Interfaces.ActualizarNivelEmergenciaReporte;
 using Application.Interfaces.AsignarResponsableReporte;
@@ -9,6 +10,7 @@ using Application.Interfaces.RechazarReporte;
 using Application.Reportes.ActualizarEstadoReporte;
 using Application.Reportes.ActualizarNivelEmergenciaReporte;
 using Application.Reportes.AsignarResponsableReporte;
+using Application.Reportes.Catalogo;
 using Application.Reportes.CrearReporte;
 using Application.Reportes.EliminarReporte;
 using Application.Reportes.ObtenerReportePorId;
@@ -55,30 +57,44 @@ public class ReportesController : ControllerBase
     }
 
     [HttpPost]
+    [Consumes("application/json")]
     [EndpointSummary("Crear un reporte")]
     [EndpointDescription("""
         Crea un nuevo reporte de daño urbano.
 
-        El cliente debe proporcionar el tipo de daño, descripción,
-        identificador de la coordenada y URL de la imagen.
+        El cliente debe proporcionar la categoría y el tipo de reporte
+        (códigos de GET /api/v1/Reportes/catalogo; el tipo debe
+        pertenecer a la categoría), descripción, la ubicación
+        (latitud y longitud dentro de Bogotá) y URL de la imagen.
 
-        La fecha de creación, el identificador del reporte, el
-        nivel de emergencia inicial y el usuario (genérico mientras
-        no exista autenticación) son establecidos internamente
+        La ubicación se registra de forma síncrona en el servicio
+        Geoespacial, que devuelve el identificador de coordenada que
+        se guarda en el reporte. Si Geoespacial no está disponible,
+        el reporte no se crea (503).
+
+        idUsuario es el usuario que crea el reporte. Mientras no exista
+        autenticación lo envía el cliente; es opcional y, si no llega,
+        se asigna un usuario genérico.
+
+        La fecha de creación, el identificador del reporte y el
+        nivel de emergencia inicial son establecidos internamente
         por el servicio.
         """)]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> CrearReporte(
         [FromBody] CrearReporteRequest request,
         CancellationToken cancellationToken)
     {
         CrearReporteCommand command = new CrearReporteCommand(
-            request.TipoDano,
+            request.Categoria,
+            request.Tipo,
             request.Descripcion,
-            request.IdCoordenada,
-            request.UrlImagen);
+            request.Latitud,
+            request.Longitud,
+            request.UrlImagen,
+            IdUsuario: request.IdUsuario);
 
         Guid idReporte = await _crearReporteHandler.Handle(command, cancellationToken);
 
@@ -90,6 +106,67 @@ public class ReportesController : ControllerBase
                 message = "Reporte creado"
             });
     }
+
+    [HttpPost]
+    [Consumes("multipart/form-data")]
+    [EndpointSummary("Crear un reporte con imagen desde el dispositivo")]
+    [EndpointDescription("""
+        Igual que crear un reporte, pero la imagen se sube como archivo
+        en lugar de enviar su URL. Se envía como multipart/form-data con
+        los campos categoria, tipo, descripcion, latitud, longitud,
+        idUsuario (opcional) e imagen (JPEG, PNG o WebP de hasta 10 MB; el formato se valida
+        por el contenido del archivo).
+
+        Reportes recibe el archivo junto con el reporte. Por ahora solo
+        se guarda el nombre del archivo (nombreImagen); más adelante el
+        servicio de Multimedia vinculará la imagen y devolverá la ruta
+        alojada en urlImagen.
+        """)]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    // Margen sobre el máximo de la imagen para el resto de campos del formulario.
+    [RequestSizeLimit(ValidadorImagen.TamanoMaximoBytes + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ValidadorImagen.TamanoMaximoBytes + 1024 * 1024)]
+    public async Task<IActionResult> CrearReporteConImagen(
+        [FromForm] CrearReporteConImagenRequest request,
+        CancellationToken cancellationToken)
+    {
+        await using Stream imagen = request.Imagen.OpenReadStream();
+
+        CrearReporteCommand command = new CrearReporteCommand(
+            request.Categoria,
+            request.Tipo,
+            request.Descripcion,
+            request.Latitud,
+            request.Longitud,
+            UrlImagen: null,
+            new ImagenAdjunta(imagen, request.Imagen.Length, request.Imagen.FileName),
+            request.IdUsuario);
+
+        Guid idReporte = await _crearReporteHandler.Handle(command, cancellationToken);
+
+        return Created(
+            $"/api/v1/Reportes/{idReporte}",
+            new
+            {
+                IdReporte = idReporte,
+                message = "Reporte creado"
+            });
+    }
+
+    [HttpGet("catalogo")]
+    [EndpointSummary("Obtener el catálogo de reportes")]
+    [EndpointDescription("""
+        Obtiene las categorías de reporte con sus tipos.
+
+        Los códigos son los valores que se envían en "categoria" y
+        "tipo" al crear un reporte; los nombres son los textos
+        para mostrar al usuario.
+        """)]
+    [ProducesResponseType<IReadOnlyList<CategoriaReporteDto>>(StatusCodes.Status200OK)]
+    public IActionResult ObtenerCatalogo() => Ok(CategoriaReporteDto.DesdeCatalogo());
 
     [HttpGet]
     [EndpointSummary("Obtener reportes")]
@@ -157,13 +234,8 @@ public class ReportesController : ControllerBase
         [FromBody] ActualizarEstadoRequest request,
         CancellationToken cancellationToken)
     {
-        if (!Enum.TryParse<EstadoReporte>(request.Estado, ignoreCase: true, out EstadoReporte nuevoEstado))
-        {
-            return BadRequest(new { message = "El estado indicado no es válido." });
-        }
-
         bool actualizado = await _actualizarEstadoReporteHandler.Handle(
-            new ActualizarEstadoReporteCommand(id, nuevoEstado), cancellationToken);
+            new ActualizarEstadoReporteCommand(id, request.Estado), cancellationToken);
 
         return actualizado ? Ok() : NotFound();
     }
@@ -183,13 +255,13 @@ public class ReportesController : ControllerBase
         [FromBody] ActualizarNivelEmergenciaRequest request,
         CancellationToken cancellationToken)
     {
-        if (!Enum.IsDefined(typeof(NivelEmergencia), request.NivelEmergencia))
+        if (!Enum.IsDefined(request.NivelEmergencia))
         {
             return BadRequest(new { message = "El nivel de emergencia indicado no es válido." });
         }
 
         bool actualizado = await _actualizarNivelEmergenciaReporteHandler.Handle(
-            new ActualizarNivelEmergenciaReporteCommand(id, (NivelEmergencia)request.NivelEmergencia), cancellationToken);
+            new ActualizarNivelEmergenciaReporteCommand(id, request.NivelEmergencia), cancellationToken);
 
         return actualizado ? Ok() : NotFound();
     }

@@ -2,9 +2,9 @@ namespace Domain.Reportes;
 
 public class Reporte
 {
-    public const int TipoDanoMaxLength = 200;
     public const int DescripcionMaxLength = 2000;
     public const int UrlImagenMaxLength = 2000;
+    public const int NombreImagenMaxLength = 255;
     public const int MotivoRechazoMaxLength = 2000;
 
     private static readonly Dictionary<EstadoReporte, EstadoReporte> SiguienteEstado = new()
@@ -16,10 +16,16 @@ public class Reporte
     };
 
     public Guid Id { get; private set; }
-    public string TipoDano { get; private set; } = null!;
+    public CategoriaReporte Categoria { get; private set; }
+    public TipoReporte Tipo { get; private set; }
     public string Descripcion { get; private set; } = null!;
     public Guid IdCoordenada { get; private set; }
-    public string UrlImagen { get; private set; } = null!;
+    // Ruta donde está alojada la imagen. Hoy la envían los clientes que usan JSON; para las
+    // imágenes subidas desde el dispositivo la devolverá más adelante el servicio de Multimedia.
+    public string? UrlImagen { get; private set; }
+    // Nombre del archivo subido desde el dispositivo junto con el reporte. Por ahora solo se
+    // guarda el nombre; el servicio de Multimedia vinculará la imagen y completará UrlImagen.
+    public string? NombreImagen { get; private set; }
     public Guid IdUsuario { get; private set; }
     public NivelEmergencia NivelEmergencia { get; private set; }
     public EstadoReporte Estado { get; private set; }
@@ -29,17 +35,23 @@ public class Reporte
 
     private Reporte() { }
 
-    public Reporte(string tipoDano,
+    public Reporte(CategoriaReporte categoria,
+        TipoReporte tipo,
         string descripcion,
-        Guid idCoordenada,
-        string urlImagen,
+        string? urlImagen,
+        string? nombreImagen,
         Guid idUsuario)
     {
-        if (string.IsNullOrWhiteSpace(tipoDano))
-            throw new ArgumentException("El tipo de daño es obligatorio.", nameof(tipoDano));
+        if (!Enum.IsDefined(categoria))
+            throw new ArgumentException("La categoría de reporte no es válida.", nameof(categoria));
 
-        if (tipoDano.Length > TipoDanoMaxLength)
-            throw new ArgumentException($"El tipo de daño no puede superar {TipoDanoMaxLength} caracteres.", nameof(tipoDano));
+        if (!Enum.IsDefined(tipo))
+            throw new ArgumentException("El tipo de reporte no es válido.", nameof(tipo));
+
+        if (!CatalogoReportes.PerteneceA(tipo, categoria))
+            throw new ArgumentException(
+                $"El tipo de reporte '{CatalogoReportes.Nombre(tipo)}' no pertenece a la categoría '{CatalogoReportes.Nombre(categoria)}'.",
+                nameof(tipo));
 
         if (string.IsNullOrWhiteSpace(descripcion))
             throw new ArgumentException("La descripción es obligatoria.", nameof(descripcion));
@@ -47,30 +59,41 @@ public class Reporte
         if (descripcion.Length > DescripcionMaxLength)
             throw new ArgumentException($"La descripción no puede superar {DescripcionMaxLength} caracteres.", nameof(descripcion));
 
-        if (idCoordenada == Guid.Empty)
-            throw new ArgumentException("El identificador de la coordenada es obligatorio.", nameof(idCoordenada));
+        if (string.IsNullOrWhiteSpace(urlImagen) && string.IsNullOrWhiteSpace(nombreImagen))
+            throw new ArgumentException("La imagen del reporte es obligatoria: su URL o el archivo.", nameof(urlImagen));
 
-        if (string.IsNullOrWhiteSpace(urlImagen))
-            throw new ArgumentException("La URL de la imagen es obligatoria.", nameof(urlImagen));
+        if (!string.IsNullOrWhiteSpace(urlImagen))
+            ValidarUrlImagen(urlImagen);
 
-        if (urlImagen.Length > UrlImagenMaxLength)
-            throw new ArgumentException($"La URL de la imagen no puede superar {UrlImagenMaxLength} caracteres.", nameof(urlImagen));
-
-        if (!Uri.TryCreate(urlImagen, UriKind.Absolute, out _))
-            throw new ArgumentException("La URL de la imagen no es una URL absoluta válida.", nameof(urlImagen));
+        if (!string.IsNullOrWhiteSpace(nombreImagen))
+            ValidarNombreImagen(nombreImagen);
 
         if (idUsuario == Guid.Empty)
             throw new ArgumentException("El identificador del usuario es obligatorio.", nameof(idUsuario));
 
         Id = Guid.CreateVersion7();
-        TipoDano = tipoDano;
+        Categoria = categoria;
+        Tipo = tipo;
         Descripcion = descripcion;
-        IdCoordenada = idCoordenada;
-        UrlImagen = urlImagen;
+        UrlImagen = string.IsNullOrWhiteSpace(urlImagen) ? null : urlImagen;
+        NombreImagen = string.IsNullOrWhiteSpace(nombreImagen) ? null : nombreImagen;
         IdUsuario = idUsuario;
         NivelEmergencia = NivelEmergencia.Default;
         Estado = EstadoReporte.Reportado;
         Fecha = DateTime.UtcNow;
+    }
+
+    // La coordenada la emite el servicio Geoespacial a partir del Id del reporte,
+    // por eso se asigna después de construir (y validar) el reporte.
+    public void AsignarCoordenada(Guid idCoordenada)
+    {
+        if (idCoordenada == Guid.Empty)
+            throw new ArgumentException("El identificador de la coordenada es obligatorio.", nameof(idCoordenada));
+
+        if (IdCoordenada != Guid.Empty)
+            throw new InvalidOperationException("El reporte ya tiene una coordenada asignada.");
+
+        IdCoordenada = idCoordenada;
     }
 
     public void ActualizarEstado(EstadoReporte nuevoEstado)
@@ -107,5 +130,24 @@ public class Reporte
 
         Estado = EstadoReporte.Rechazado;
         MotivoRechazo = motivo;
+    }
+
+    private static void ValidarUrlImagen(string urlImagen)
+    {
+        if (urlImagen.Length > UrlImagenMaxLength)
+            throw new ArgumentException($"La URL de la imagen no puede superar {UrlImagenMaxLength} caracteres.", nameof(urlImagen));
+
+        if (!Uri.TryCreate(urlImagen, UriKind.Absolute, out _))
+            throw new ArgumentException("La URL de la imagen no es una URL absoluta válida.", nameof(urlImagen));
+    }
+
+    private static void ValidarNombreImagen(string nombreImagen)
+    {
+        if (nombreImagen.Length > NombreImagenMaxLength)
+            throw new ArgumentException($"El nombre de la imagen no puede superar {NombreImagenMaxLength} caracteres.", nameof(nombreImagen));
+
+        // Es solo un nombre de archivo, nunca una ruta.
+        if (nombreImagen.IndexOfAny(['/', '\\']) >= 0 || nombreImagen is "." or "..")
+            throw new ArgumentException("El nombre de la imagen no es válido.", nameof(nombreImagen));
     }
 }
