@@ -25,6 +25,7 @@ Las credenciales tienen valores por defecto **solo para desarrollo**. Para cambi
 | `/` | `frontend:3000` | Formulario de reportes |
 | `/api/v1/reportes/*` | `reportes:8080/api/v1/Reportes/*` | CRUD y catálogo (`/api/v1/reportes/catalogo`) |
 | `/api/v1/geoespacial/reports` | `geoespacial-api:8000/api/v1/geospatial/reports` | **Solo GET** (mapa). La asignación de coordenadas es interna |
+| `/api/v1/geoespacial/coordinates/{id}` | `geoespacial-api:8000/api/v1/geospatial/coordinates/{id}` | **Solo GET**: consulta una coordenada por su id (`idCoordenada` del reporte) |
 | `/api/v1/usuarios/*` | `usuarios:8080/api/v1/users/*` | |
 | `/api/v1/auditoria/*` | `auditoria:8080/auditoria/*` | El gateway agrega `X-Urban-Gateway-Key`; sin ella Auditoria responde 403 |
 | `/health` | — | Salud del gateway |
@@ -42,7 +43,7 @@ Cualquier otra ruta bajo `/api/` responde 404. La configuración está en `gatew
 | `/docs/usuarios` | Swagger UI de Usuarios |
 | `/docs/geoespacial` | Swagger UI de Geoespacial |
 
-El gateway quita el prefijo `/docs/<servicio>` y reescribe las URLs absolutas que generan los servicios, así que "probar" desde la documentación funciona y llega a las mismas rutas que ya publica `/api/v1/*` (en Geoespacial, solo `GET /reports`). Scalar de Reportes y Auditoria solo existe con `ASPNETCORE_ENVIRONMENT=Development`, que es lo que usa este compose.
+El gateway quita el prefijo `/docs/<servicio>` y reescribe las URLs absolutas que generan los servicios, así que "probar" desde la documentación funciona y llega a las mismas rutas que ya publica `/api/v1/*` (en Geoespacial, solo `GET /reports` y `GET /coordinates/{id}`). Scalar de Reportes y Auditoria solo existe con `ASPNETCORE_ENVIRONMENT=Development`, que es lo que usa este compose.
 
 ## Aislamiento
 
