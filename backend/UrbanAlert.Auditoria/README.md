@@ -69,7 +69,26 @@ psql_reportes -d urbanalert_auditoria < database/001_audit_store.sql
 psql_reportes -d urbanalert_reportes -c 'GRANT SELECT ON "Reportes" TO reportes_reader;'
 ```
 
-La tabla `"Reportes"` la crean las migraciones de Reportes, así que esa API debe haberse ejecutado al menos una vez. Luego basta con `dotnet run`. En Development la referencia de la API está en `http://localhost:5040/scalar/v1`; los endpoints de `/auditoria` siguen exigiendo un JWT de Cognito.
+La tabla `"Reportes"` la crean las migraciones de Reportes, así que esa API debe haberse ejecutado al menos una vez. Luego basta con `dotnet run`. En Development la referencia de la API está en `http://localhost:5040/scalar/v1`; los endpoints de `/auditoria` siguen exigiendo un JWT de Cognito, salvo en modo de desarrollo.
+
+### Modo de desarrollo sin Cognito
+
+Para consultar la auditoría mientras no hay inicio de sesión:
+
+```bash
+Autenticacion__ModoDesarrollo=true dotnet run
+```
+
+Solo se permite con `ASPNETCORE_ENVIRONMENT=Development`: en otro entorno el servicio no arranca. Sin header `Authorization`, la identidad se toma de los headers:
+
+| Header | Valores | Por defecto |
+|---|---|---|
+| `X-Usuario-Id` | GUID del usuario (el `idUsuario` de los reportes) | `018f4c2a-0000-7000-8000-000000000001`, el admin de los datos semilla de Usuarios |
+| `X-Usuario-Rol` | `ciudadano`, `gestor` o `admin` | `admin` |
+
+Se aplican las mismas reglas de acceso que con Cognito: un ciudadano solo ve sus reportes y un gestor, los que tiene asignados. Un header inválido responde 401 con el motivo. Con `Authorization: Bearer` se valida el token de Cognito como siempre. En Scalar ambos headers aparecen como parámetros de cada endpoint.
+
+Cualquiera que llegue a la API puede elegir su identidad, así que no se debe activar en un entorno expuesto con datos reales.
 
 La imagen se construye con el `Dockerfile` de esta carpeta. MassTransit crea y enlaza la cola `q_auditoria_dotnet` al exchange del tipo `ReporteCreadoEvent`; los errores persistentes siguen la política de reintentos/error queue de MassTransit.
 
@@ -77,7 +96,7 @@ La imagen se construye con el `Dockerfile` de esta carpeta. MassTransit crea y e
 
 El consumidor se conecta únicamente al tipo MassTransit de Reportes .NET. En el workspace no existe un productor Geoespacial .NET que publique eventos para esta auditoría.
 
-La cobertura seguirá incompleta hasta que los handlers .NET publiquen eventos para transiciones, asignación, nivel de emergencia, rechazo y eliminación. El contrato actual no incluye `CorrelationId`, municipio ni coordenadas geográficas; el consumidor no fabrica estos datos. Además, `IdUsuario` se genera aleatoriamente, así que el filtro de propietario no coincidirá con el `sub` real hasta incorporar autenticación en Reportes.
+La cobertura seguirá incompleta hasta que los handlers .NET publiquen eventos para transiciones, asignación, nivel de emergencia, rechazo y eliminación. El contrato actual no incluye `CorrelationId`, municipio ni coordenadas geográficas; el consumidor no fabrica estos datos. Además, mientras no haya autenticación, `IdUsuario` lo envía el cliente de Reportes (o se genera uno genérico si no lo envía), así que el filtro de propietario no corresponde a un `sub` real de Cognito.
 
 El archivo de auditoría, la consulta de integridad y el archivado opcional S3 Object Lock están portados. La política de retención y el bucket deben configurarse en AWS; este servicio no crea ni configura el bucket.
 
