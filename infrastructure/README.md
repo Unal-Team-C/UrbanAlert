@@ -135,6 +135,6 @@ Requiere una cuenta de Cloudflare y un dominio administrado en ella.
   - da a `reportes_reader` permiso de lectura sobre las tablas que creen después las migraciones de Reportes.
 
   Para volver a ejecutarlo: `docker compose down -v`.
-- **El frontend** llama a `/api/v1/reportes` en su mismo origen. Con el compose, esa ruta la atiende el gateway. Con `npm run dev`, sin gateway, la atiende un *rewrite* de Next.js hacia `REPORTES_API_URL` (por defecto `http://localhost:5039`).
+- **El frontend** llama a `/api/v1/reportes` y `/api/v1/usuarios` en su mismo origen. Con el compose, esas rutas las atiende el gateway. Con `npm run dev`, sin gateway, las atienden *rewrites* de Next.js hacia `REPORTES_API_URL` (por defecto `http://localhost:5039`) y `USUARIOS_API_URL` (por defecto `http://localhost:8081`).
 - **En AWS**, el equivalente sería API Gateway con el *authorizer* de Cognito. Este Nginx solo reproduce las rutas y el header hacia Auditoria.
 - Cada servicio conserva su propio compose (`backend/*/deploy/docker` o `compose.yaml`) para trabajar con él de forma aislada.

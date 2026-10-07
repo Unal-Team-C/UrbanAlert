@@ -8,4 +8,5 @@ public record CrearReporteRequest(
     string Descripcion,
     double Latitud,
     double Longitud,
-    string UrlImagen);
+    string UrlImagen,
+    Guid? IdUsuario = null);

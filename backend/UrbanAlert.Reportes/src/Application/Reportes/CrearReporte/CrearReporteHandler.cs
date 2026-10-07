@@ -26,9 +26,9 @@ public class CrearReporteHandler : ICrearReporteHandler
 
     public async Task<Guid> Handle(CrearReporteCommand command, CancellationToken cancellationToken)
     {
-        // Sin autenticación todavía: se asigna un usuario genérico hasta que
-        // exista un proveedor de identidad real del cual tomar el usuario actual.
-        Guid idUsuarioGenerico = Guid.NewGuid();
+        // Sin autenticación todavía: el usuario lo envía el cliente. Si no llega, se asigna uno
+        // genérico hasta que exista un proveedor de identidad del cual tomar el usuario actual.
+        Guid idUsuario = command.IdUsuario ?? Guid.NewGuid();
 
         string? nombreImagen = null;
         if (command.Imagen is not null)
@@ -48,7 +48,7 @@ public class CrearReporteHandler : ICrearReporteHandler
             command.Descripcion,
             command.UrlImagen,
             nombreImagen,
-            idUsuarioGenerico);
+            idUsuario);
 
         Guid idCoordenada = await _geoespacialClient.AsignarCoordenadaAsync(
             reporte.Id, command.Latitud, command.Longitud, cancellationToken);
