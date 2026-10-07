@@ -56,3 +56,14 @@ export async function crearUsuario(name: string, email: string): Promise<Usuario
   }
   throw new Error("No fue posible crear el usuario. Intente nuevamente más tarde.");
 }
+
+// GET /api/v1/users. Lista completa, para mostrar nombres en lugar de ids.
+export async function listarUsuarios(signal?: AbortSignal): Promise<Usuario[]> {
+  const response = await fetch("/api/v1/usuarios", { signal });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return (await response.json()) as Usuario[];
+}
+
+export function nombreDeUsuario(usuarios: Usuario[], id: string): string {
+  return usuarios.find((usuario) => usuario.id === id)?.name ?? id.slice(0, 8);
+}
