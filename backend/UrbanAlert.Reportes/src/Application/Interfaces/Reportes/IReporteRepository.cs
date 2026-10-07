@@ -11,6 +11,7 @@ public interface IReporteRepository
     Task<(IReadOnlyList<Reporte> Elementos, int Total)> ObtenerPaginadoAsync(
         EstadoReporte? estado,
         NivelEmergencia? nivelEmergencia,
+        TipoReporte? tipo,
         int pagina,
         int tamanoPagina,
         CancellationToken cancellationToken);
