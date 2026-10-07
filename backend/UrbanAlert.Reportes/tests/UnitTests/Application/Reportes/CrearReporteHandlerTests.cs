@@ -63,6 +63,36 @@ public class CrearReporteHandlerTests
     }
 
     [Fact]
+    public async Task Handle_GuardaYPublicaElUsuarioEnviado()
+    {
+        Guid idUsuario = Guid.CreateVersion7();
+
+        await CrearHandler().Handle(ComandoValido() with { IdUsuario = idUsuario }, CancellationToken.None);
+
+        Assert.Equal(idUsuario, Assert.Single(_repositorio.Agregados).IdUsuario);
+        ReporteCreadoEvent evento = Assert.IsType<ReporteCreadoEvent>(Assert.Single(_publicador.Eventos));
+        Assert.Equal(idUsuario, evento.Reporte.IdUsuario);
+    }
+
+    [Fact]
+    public async Task Handle_AsignaUnUsuarioGenerico_SiNoSeEnviaUsuario()
+    {
+        await CrearHandler().Handle(ComandoValido(), CancellationToken.None);
+
+        Assert.NotEqual(Guid.Empty, Assert.Single(_repositorio.Agregados).IdUsuario);
+    }
+
+    [Fact]
+    public async Task Handle_NoLlamaAGeoespacial_SiElUsuarioEsVacio()
+    {
+        CrearReporteCommand comando = ComandoValido() with { IdUsuario = Guid.Empty };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => CrearHandler().Handle(comando, CancellationToken.None));
+
+        Assert.Empty(_geoespacial.Llamadas);
+    }
+
+    [Fact]
     public async Task Handle_ConArchivo_GuardaSoloElNombreDeLaImagen()
     {
         CrearReporteCommand comando = ComandoValido() with

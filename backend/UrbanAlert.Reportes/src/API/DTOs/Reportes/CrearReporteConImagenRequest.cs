@@ -9,4 +9,5 @@ public record CrearReporteConImagenRequest(
     string Descripcion,
     double Latitud,
     double Longitud,
-    IFormFile Imagen);
+    IFormFile Imagen,
+    Guid? IdUsuario = null);

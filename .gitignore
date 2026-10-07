@@ -44,6 +44,9 @@ obj/x86/
 bld/
 [Oo]bj/
 [Oo]ut/
+# Paquetes Java "out" (puertos de salida en arquitectura hexagonal)
+!**/src/main/java/**/out/
+!**/src/test/java/**/out/
 [Ll]og/
 [Ll]ogs/
 
