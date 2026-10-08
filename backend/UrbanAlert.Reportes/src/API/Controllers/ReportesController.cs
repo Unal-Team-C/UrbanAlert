@@ -173,13 +173,16 @@ public class ReportesController : ControllerBase
     [EndpointDescription("""
         Obtiene una página de reportes registrados en el sistema.
 
-        Permite filtrar opcionalmente por estado y nivel de emergencia.
-        El tamaño de página está limitado a un máximo de 100 elementos.
+        Permite filtrar opcionalmente por estado, nivel de emergencia y
+        tipo de reporte (códigos de GET /api/v1/Reportes/catalogo).
+        Los filtros se combinan. El tamaño de página está limitado a un
+        máximo de 100 elementos.
         """)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> ObtenerReportes(
         [FromQuery] EstadoReporte? estado,
         [FromQuery] NivelEmergencia? nivelEmergencia,
+        [FromQuery] TipoReporte? tipo,
         [FromQuery] int pagina,
         [FromQuery] int tamanoPagina,
         CancellationToken cancellationToken)
@@ -193,7 +196,7 @@ public class ReportesController : ControllerBase
         };
 
         PaginaDto<ReporteDto> reportes = await _obtenerReportesHandler.Handle(
-            new ObtenerReportesQuery(estado, nivelEmergencia, paginaNormalizada, tamanoPaginaNormalizado),
+            new ObtenerReportesQuery(estado, nivelEmergencia, tipo, paginaNormalizada, tamanoPaginaNormalizado),
             cancellationToken);
 
         return Ok(reportes);

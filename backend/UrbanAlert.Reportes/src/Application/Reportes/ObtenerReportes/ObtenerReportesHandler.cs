@@ -9,7 +9,7 @@ public class ObtenerReportesHandler(IReporteRepository reporteRepository) : IObt
     public async Task<PaginaDto<ReporteDto>> Handle(ObtenerReportesQuery query, CancellationToken cancellationToken)
     {
         (IReadOnlyList<Reporte> elementos, int total) = await reporteRepository.ObtenerPaginadoAsync(
-            query.Estado, query.NivelEmergencia, query.Pagina, query.TamanoPagina, cancellationToken);
+            query.Estado, query.NivelEmergencia, query.Tipo, query.Pagina, query.TamanoPagina, cancellationToken);
 
         return new PaginaDto<ReporteDto>(
             elementos.Select(ReporteDto.DesdeEntidad).ToList(),

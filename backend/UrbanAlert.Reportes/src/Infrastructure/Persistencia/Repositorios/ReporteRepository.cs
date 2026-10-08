@@ -18,6 +18,7 @@ public class ReporteRepository(ReportesDbContext dbContext) : IReporteRepository
     public async Task<(IReadOnlyList<Reporte> Elementos, int Total)> ObtenerPaginadoAsync(
         EstadoReporte? estado,
         NivelEmergencia? nivelEmergencia,
+        TipoReporte? tipo,
         int pagina,
         int tamanoPagina,
         CancellationToken cancellationToken)
@@ -29,6 +30,9 @@ public class ReporteRepository(ReportesDbContext dbContext) : IReporteRepository
 
         if (nivelEmergencia is not null)
             consulta = consulta.Where(reporte => reporte.NivelEmergencia == nivelEmergencia);
+
+        if (tipo is not null)
+            consulta = consulta.Where(reporte => reporte.Tipo == tipo);
 
         int total = await consulta.CountAsync(cancellationToken);
 

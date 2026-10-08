@@ -100,6 +100,43 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     }
 
     [Fact]
+    public async Task ObtenerReportes_FiltraPorTipo()
+    {
+        Guid idHueco = await CrearReporteAsync();
+        Guid idSemaforo = await CrearReporteDeTipoAsync(CategoriaReporte.Senalizacion, TipoReporte.SemaforoApagado);
+
+        PaginaRespuesta pagina = await ObtenerPaginaAsync("?tipo=SEMAFORO_APAGADO&tamanoPagina=100");
+
+        Assert.Contains(pagina.Elementos, r => r.Id == idSemaforo);
+        Assert.DoesNotContain(pagina.Elementos, r => r.Id == idHueco);
+        Assert.All(pagina.Elementos, r => Assert.Equal("SEMAFORO_APAGADO", r.Tipo));
+    }
+
+    [Fact]
+    public async Task ObtenerReportes_TotalElementosCuentaSoloLosReportesDelTipo()
+    {
+        await CrearReporteDeTipoAsync(CategoriaReporte.Senalizacion, TipoReporte.SemaforoApagado);
+
+        PaginaRespuesta delTipo = await ObtenerPaginaAsync("?tipo=SEMAFORO_APAGADO&pagina=1&tamanoPagina=1");
+        PaginaRespuesta todos = await ObtenerPaginaAsync("?pagina=1&tamanoPagina=1");
+
+        Assert.True(delTipo.TotalElementos >= 1);
+        Assert.True(delTipo.TotalElementos < todos.TotalElementos);
+    }
+
+    [Fact]
+    public async Task ObtenerReportes_CombinaElFiltroDeTipoConElDeEstado()
+    {
+        Guid idSemaforo = await CrearReporteDeTipoAsync(CategoriaReporte.Senalizacion, TipoReporte.SemaforoApagado);
+
+        PaginaRespuesta reportados = await ObtenerPaginaAsync("?tipo=SEMAFORO_APAGADO&estado=REPORTADO&tamanoPagina=100");
+        PaginaRespuesta rechazados = await ObtenerPaginaAsync("?tipo=SEMAFORO_APAGADO&estado=RECHAZADO&tamanoPagina=100");
+
+        Assert.Contains(reportados.Elementos, r => r.Id == idSemaforo);
+        Assert.DoesNotContain(rechazados.Elementos, r => r.Id == idSemaforo);
+    }
+
+    [Fact]
     public async Task ObtenerReportes_RespetaElTamanoDePaginaSolicitado()
     {
         await CrearReporteAsync();
@@ -383,6 +420,40 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         HttpResponseMessage respuesta = await _client.GetAsync($"/api/v1/Reportes?estado={estado}");
 
         Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("BACHE")]
+    [InlineData("SemaforoApagado")]
+    [InlineData("3")]
+    public async Task ObtenerReportes_Devuelve400_SiElTipoNoEsUnCodigoValido(string tipo)
+    {
+        HttpResponseMessage respuesta = await _client.GetAsync($"/api/v1/Reportes?tipo={tipo}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+    }
+
+    private async Task<Guid> CrearReporteDeTipoAsync(CategoriaReporte categoria, TipoReporte tipo)
+    {
+        HttpResponseMessage respuesta = await _client.PostAsJsonAsync(
+            "/api/v1/Reportes", ReporteDePrueba() with { Categoria = categoria, Tipo = tipo }, Json);
+        Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
+
+        CrearReporteRespuesta? creado = await respuesta.Content.ReadFromJsonAsync<CrearReporteRespuesta>();
+        Assert.NotNull(creado);
+
+        return creado!.IdReporte;
+    }
+
+    private async Task<PaginaRespuesta> ObtenerPaginaAsync(string consulta)
+    {
+        HttpResponseMessage respuesta = await _client.GetAsync($"/api/v1/Reportes{consulta}");
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+
+        PaginaRespuesta? pagina = await respuesta.Content.ReadFromJsonAsync<PaginaRespuesta>();
+        Assert.NotNull(pagina);
+
+        return pagina!;
     }
 
     private Task<HttpResponseMessage> PostJsonAsync(string json) =>

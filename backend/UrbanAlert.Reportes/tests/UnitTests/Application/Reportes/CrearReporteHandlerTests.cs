@@ -174,7 +174,7 @@ public class CrearReporteHandlerTests
         public Task<Reporte?> ObtenerPorIdAsync(Guid id, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<(IReadOnlyList<Reporte> Elementos, int Total)> ObtenerPaginadoAsync(
-            EstadoReporte? estado, NivelEmergencia? nivelEmergencia, int pagina, int tamanoPagina, CancellationToken cancellationToken) =>
+            EstadoReporte? estado, NivelEmergencia? nivelEmergencia, TipoReporte? tipo, int pagina, int tamanoPagina, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task ActualizarAsync(Reporte reporte, CancellationToken cancellationToken) => throw new NotSupportedException();
