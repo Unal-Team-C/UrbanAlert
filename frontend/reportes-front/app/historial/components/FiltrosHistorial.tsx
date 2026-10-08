@@ -1,13 +1,16 @@
 import { ESTADOS, NIVELES } from "../../lib/catalogo";
+import type { CategoriaCatalogo } from "../../lib/catalogo";
 import type { FiltrosReportes } from "../../lib/reportes";
 
 const CLASE = "rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900";
 
 export default function FiltrosHistorial({
   filtros,
+  catalogo,
   onCambiar,
 }: {
   filtros: FiltrosReportes;
+  catalogo: CategoriaCatalogo[];
   onCambiar: (filtro: keyof FiltrosReportes, valor: string) => void;
 }) {
   return (
@@ -39,6 +42,25 @@ export default function FiltrosHistorial({
             <option key={n.codigo} value={n.codigo}>
               {n.nombre}
             </option>
+          ))}
+        </select>
+      </label>
+      <label className="text-sm text-gray-700">
+        <span className="mb-1 block">Tipo</span>
+        <select
+          className={`${CLASE} max-w-64`}
+          value={filtros.tipo ?? ""}
+          onChange={(e) => onCambiar("tipo", e.target.value)}
+        >
+          <option value="">Todos</option>
+          {catalogo.map((categoria) => (
+            <optgroup key={categoria.codigo} label={categoria.nombre}>
+              {categoria.tipos.map((tipo) => (
+                <option key={tipo.codigo} value={tipo.codigo}>
+                  {tipo.nombre}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </label>

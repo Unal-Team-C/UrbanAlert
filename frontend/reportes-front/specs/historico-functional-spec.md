@@ -1,6 +1,6 @@
 # Functional Specification — UrbanAlert Report History (Frontend)
 
-**Version:** 0.3.0 (draft)
+**Version:** 0.4.0 (draft)
 **Date:** 2026-10-07
 **Author:** UrbanAlert Team C
 **Status:** Draft — pending review
@@ -22,7 +22,7 @@ It is a **read-only consumer** of existing services, reached through the local g
 | Report detail view | Map views (Fabian) |
 | Per-report audit timeline | Work-order detail / progress % (Julian) |
 | Integrity check badge | Changing state / level / assignment of a report |
-| Totals by state and level | Authentication UI / Identity Provider |
+| Totals by state, level and type | Authentication UI / Identity Provider |
 | Responsive layout, loading / empty / error states | Backend changes (see §7 Known Gaps) |
 
 ---
@@ -49,10 +49,11 @@ Acceptance criteria:
 - Loading skeleton while fetching; empty state when there are no results; error state with retry when the request fails.
 
 ### US-H02 — Filter the history
-**As an** administrator, **I want to** filter by state and emergency level (filter by type comes later, see §9), **so that** I can find relevant reports quickly.
+**As an** administrator, **I want to** filter by state, emergency level and type, **so that** I can find relevant reports quickly.
 
 Acceptance criteria:
-- Filters map to the backend query parameters `estado` and `nivelEmergencia`.
+- Filters map to the backend query parameters `estado`, `nivelEmergencia` and `tipo`; they combine.
+- The type selector groups the catalog's types by category.
 - Changing a filter resets to page 1.
 - Active filters are reflected in the URL (shareable / back-button friendly).
 
@@ -84,8 +85,8 @@ Acceptance criteria:
 Acceptance criteria:
 - One card per state and per emergency level, with the exact total of the system.
 - Totals come from the backend's `TotalElementos` (one request per value with `tamanoPagina=1`), never from counting a loaded page.
-- Clicking a card applies that filter to the list.
-- Count by damage type is **not** in this version: the backend has no type filter (see §9).
+- Clicking a card applies that filter to the list; clicking the active card removes it.
+- Totals by type (the catalog has 51 types in 9 categories) live in a collapsed panel. Categories are collapsed inside it and a category's totals are requested only the first time it is expanded, so opening the page costs 10 requests, not 61.
 
 ---
 
@@ -163,6 +164,6 @@ None are fixed by this module (no backend changes).
 
 ---
 
-## 9. Planned Follow-up (separate branch from `main`)
+## 9. Type filter (done)
 
-Add a `tipo` filter to `GET /reportes` in the Reportes service, then add the type filter and the per-type totals to this module. Tracked as a second iteration so this one does not depend on another team's service.
+The `tipo` filter was added to `GET /reportes` in a separate PR (merged to `main`), and this module now uses it for the type selector and the per-type totals.

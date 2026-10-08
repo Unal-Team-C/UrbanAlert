@@ -4,7 +4,7 @@
 
 | Check | Command | Result |
 |---|---|---|
-| Unit + component tests | `npm test` | 34 passed (9 files) |
+| Unit + component tests | `npm test` | 45 passed (11 files) |
 | Lint | `npx eslint app` | clean |
 | Production build | `npm run build` | compiles; `/historial` and `/historial/[id]` generated |
 
@@ -27,3 +27,15 @@ Data: 3 reports created through the gateway (2 users), one moved to `VERIFICADO`
 Known and expected: the timeline has only the creation event (the `VERIFICADO` and `RECHAZADO` changes are not audited by the backend, see functional spec §7.1).
 
 Not exercised in a browser: clicking filters/pager, "Cargar más" with real data, the "Alterada" result. These are covered by component tests only.
+
+## Round 2: type filter and styles
+
+| Check | Result |
+|---|---|
+| `?tipo=` through the gateway (`HUECOS_EN_LA_VIA 1`, `GRIETAS_EN_LA_VIA 1`, `SEMAFORO_APAGADO 1`, `ANDEN_ROTO 0`) | OK, exact |
+| `?tipo=BACHE` | 400 |
+| `?tipo=SEMAFORO_APAGADO&estado=RECHAZADO` | 1, combination works |
+| `/historial?tipo=SEMAFORO_APAGADO` | selector shows the type, table shows only that report |
+| Styles in dark theme | **Bug found and fixed**: with the system in dark mode the title and table text were unreadable (no explicit colors). Fixed with `historial/layout.tsx`. Checked with Chrome `--force-dark-mode`, using Next's 404 page as a control to prove dark mode was really active (an earlier attempt with `--blink-settings=preferredColorScheme=1` did not activate it, so that first check was not valid) |
+
+Not exercised in a browser: expanding a category in the type panel and clicking a type (covered by component tests).
