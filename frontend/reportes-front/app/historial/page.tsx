@@ -13,6 +13,7 @@ import {
 } from "../lib/reportes";
 import { Cargando, ErrorReintentar, Vacio } from "./components/Estados";
 import FiltrosHistorial from "./components/FiltrosHistorial";
+import TotalesPorTipo from "./components/TotalesPorTipo";
 import TablaReportes from "./components/TablaReportes";
 import TotalesGrid from "./components/TotalesGrid";
 
@@ -24,6 +25,7 @@ function Historial() {
   const filtros: FiltrosReportes = {
     estado: parametros.get("estado") ?? undefined,
     nivelEmergencia: parametros.get("nivel") ?? undefined,
+    tipo: parametros.get("tipo") ?? undefined,
   };
   const pagina = Math.max(1, Number(parametros.get("pagina")) || 1);
 
@@ -39,7 +41,8 @@ function Historial() {
 
   const estado = filtros.estado;
   const nivel = filtros.nivelEmergencia;
-  const clave = `${estado ?? ""}|${nivel ?? ""}|${pagina}|${intento}`;
+  const tipo = filtros.tipo;
+  const clave = `${estado ?? ""}|${nivel ?? ""}|${tipo ?? ""}|${pagina}|${intento}`;
   const cargando = resultado?.clave !== clave;
   const datos = resultado?.datos ?? null;
   const error = cargando ? "" : (resultado?.error ?? "");
@@ -52,14 +55,14 @@ function Historial() {
 
   useEffect(() => {
     const controlador = new AbortController();
-    listarReportes({ estado, nivelEmergencia: nivel }, pagina, controlador.signal)
+    listarReportes({ estado, nivelEmergencia: nivel, tipo }, pagina, controlador.signal)
       .then((pagina) => setResultado({ clave, datos: pagina }))
       .catch((e: ApiError) => {
         if (esAbortError(e)) return;
         setResultado((previo) => ({ clave, datos: previo?.datos, error: e.message }));
       });
     return () => controlador.abort();
-  }, [estado, nivel, pagina, clave]);
+  }, [estado, nivel, tipo, pagina, clave]);
 
   const navegar = useCallback(
     (cambios: Record<string, string>) => {
@@ -86,7 +89,8 @@ function Historial() {
       </header>
 
       <TotalesGrid filtros={filtros} onSeleccionar={cambiarFiltro} />
-      <FiltrosHistorial filtros={filtros} onCambiar={cambiarFiltro} />
+      <TotalesPorTipo catalogo={catalogo} filtros={filtros} onSeleccionar={cambiarFiltro} />
+      <FiltrosHistorial filtros={filtros} catalogo={catalogo} onCambiar={cambiarFiltro} />
 
       {error ? (
         <ErrorReintentar mensaje={error} onReintentar={() => setIntento((n) => n + 1)} />

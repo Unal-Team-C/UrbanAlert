@@ -25,7 +25,7 @@ export type Reporte = {
   motivoRechazo: string | null;
 };
 
-export type FiltrosReportes = { estado?: string; nivelEmergencia?: string };
+export type FiltrosReportes = { estado?: string; nivelEmergencia?: string; tipo?: string };
 
 export const TAMANO_PAGINA = 20;
 

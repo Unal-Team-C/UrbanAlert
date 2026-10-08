@@ -1,6 +1,6 @@
 # Technical Specification — UrbanAlert Report History (Frontend)
 
-**Version:** 0.1.0 (draft)
+**Version:** 0.2.0 (draft)
 **Date:** 2026-10-07
 **Status:** Draft — pending review
 **Functional spec:** [historico-functional-spec.md](historico-functional-spec.md)
@@ -32,11 +32,13 @@ All calls are same-origin `fetch("/api/v1/...")`.
 ```
 app/
   historial/
+    layout.tsx                fixed bg/text colors, see §5 Theme
     page.tsx                  list + totals (client)
     [id]/page.tsx             detail + timeline (client)
     components/
       TotalesGrid.tsx         state / level cards
-      FiltrosHistorial.tsx    state and level selects
+      FiltrosHistorial.tsx    state, level and type selects (type grouped by category)
+      TotalesPorTipo.tsx      collapsed panel, per-category lazy totals
       TablaReportes.tsx       rows + pager
       DetalleReporte.tsx
       LineaDeTiempo.tsx
@@ -113,6 +115,14 @@ State and level code lists are not duplicated by hand where the catalog can prov
 - Button calls `.../integridad`; shows *Válida* when `verified`, otherwise *Alterada* with `brokenSequence`.
 - It is on-demand, not automatic.
 
+### Type filter and totals
+- `?tipo=<code>` is sent as `tipo`; combined with `estado` and `nivelEmergencia`.
+- `TotalesPorTipo` is collapsed by default. Expanding a category requests `contarPor("tipo", código)` only for its types that have no total yet; collapsing and re-expanding does not repeat requests. A failed type shows "—" with retry. Nothing is requested for the 51 types on page load.
+- The request controller is created inside the effect (React re-runs effects in development; one created outside would stay aborted).
+
+### Theme
+`globals.css` switches the base text/background colors with `prefers-color-scheme`. `/historial` has its own `layout.tsx` (`bg-gray-100 text-gray-900`), as the report form does, so the module looks the same in light and dark system themes.
+
 ## 6. Error handling
 
 `lib/api.ts` throws a typed `ApiError { status, message }`. Message is taken from `{message}` / ProblemDetails `{title, errors}` with the same rules as the form's `leerError`. The form page is not touched (T-2), so the rules are mirrored in `lib/api.ts` rather than extracted. Mapping follows the functional spec §6. Network failure → "No fue posible conectar", with retry.
@@ -139,7 +149,6 @@ Verification before calling it done: `npm run lint`, `npm run build`, unit/compo
 
 ## 9. Out of scope / later
 
-- Type filter and per-type totals (needs backend, see functional spec §9).
 - Real authentication.
 - Extra audit events (state changes, assignment, rejection).
 

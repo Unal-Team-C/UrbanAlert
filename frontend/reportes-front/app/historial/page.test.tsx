@@ -94,7 +94,7 @@ describe("/historial", () => {
   });
 
   it("pide la página y filtros que dice la URL", async () => {
-    busqueda = "estado=ASIGNADO&nivel=ALTA&pagina=2";
+    busqueda = "estado=ASIGNADO&nivel=ALTA&tipo=HUECOS_EN_LA_VIA&pagina=2";
     const fetchMock = mockApi([reporte(1)], 45, 2);
     render(<HistorialPage />);
     await waitFor(() => {
@@ -102,6 +102,7 @@ describe("/historial", () => {
         .find((q) => q.get("tamanoPagina") === "20");
       expect(lista?.get("estado")).toBe("ASIGNADO");
       expect(lista?.get("nivelEmergencia")).toBe("ALTA");
+      expect(lista?.get("tipo")).toBe("HUECOS_EN_LA_VIA");
       expect(lista?.get("pagina")).toBe("2");
     });
   });
