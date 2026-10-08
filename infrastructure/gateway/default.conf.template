@@ -72,6 +72,20 @@ server {
         proxy_pass $auditoria;
     }
 
+    # ---------------------------------------------------------------- Registry (perfil "registry")
+    # La API del Docker Registry ya vive en /v2/, así que no hace falta reescribir rutas.
+    # Sin autenticación: quien llegue al gateway puede hacer push y pull de las imágenes.
+    # Sin el perfil "registry" el contenedor no existe; nginx igual arranca (ver resolver arriba)
+    # y solo responde error al recibir una petición.
+    location /v2/ {
+        set $registry http://registry:5000;
+        client_max_body_size 0;
+        chunked_transfer_encoding on;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_pass $registry;
+    }
+
     # ---------------------------------------------------------------- Documentación
     # Scalar (Reportes, Auditoria) y Swagger UI (Usuarios, Geoespacial) en /docs/<servicio>.
     # El gateway quita el prefijo y reescribe las URLs absolutas que generan los servicios

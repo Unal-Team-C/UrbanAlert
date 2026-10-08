@@ -28,6 +28,7 @@ Las credenciales tienen valores por defecto **solo para desarrollo**. Para cambi
 | `/api/v1/geoespacial/coordinates/{id}` | `geoespacial-api:8000/api/v1/geospatial/coordinates/{id}` | **Solo GET**: consulta una coordenada por su id (`idCoordenada` del reporte) |
 | `/api/v1/usuarios/*` | `usuarios:8080/api/v1/users/*` | |
 | `/api/v1/auditoria/*` | `auditoria:8080/auditoria/*` | El gateway agrega `X-Urban-Gateway-Key`; sin ella Auditoria responde 403 |
+| `/v2/*` | `registry:5000/v2/*` | Solo con el perfil `registry` arriba. Sin autenticación: quien llegue al gateway puede hacer push/pull |
 | `/health` | — | Salud del gateway |
 
 Cualquier otra ruta bajo `/api/` responde 404. La configuración está en `gateway/default.conf.template`.
@@ -124,6 +125,29 @@ Requiere una cuenta de Cloudflare y un dominio administrado en ella.
 - **Credenciales**: definir contraseñas propias en `.env`, no usar los valores por defecto.
 - **Puerto del gateway**: el túnel no lo necesita. Para no exponerlo en la red de la máquina: `GATEWAY_PORT=127.0.0.1:8080`.
 - **Modo debug**: **no** combinar `docker-compose.debug.yml` con el túnel. Para revisar bases de datos o RabbitMQ en la máquina remota, usar un túnel SSH.
+
+## Registro de imágenes propio (MinIO)
+
+Para publicar `reportes`, `auditoria`, `geoespacial-api` y `usuarios` como imágenes ya construidas (por ejemplo, paso previo a subirlas a AWS) en vez de compilarlas in situ con `--build`, hay un registry Docker propio (`registry:2`) con MinIO como backend S3. No se levanta con `docker compose up -d` normal, solo con su perfil:
+
+```bash
+docker compose --profile registry up -d
+docker compose build reportes auditoria geoespacial-api usuarios
+docker compose push  reportes auditoria geoespacial-api usuarios
+curl http://localhost:5000/v2/_catalog   # confirma qué quedó publicado
+```
+
+Los 4 servicios ya tienen `image: localhost:${REGISTRY_PORT:-5000}/urbanalert/<servicio>:${IMAGE_TAG:-latest}` además de su `build:`, así que `docker compose build` los etiqueta listos para `push`. `localhost:5000` funciona sin tocar `daemon.json`: Docker trata `localhost`/`127.0.0.1` como registry inseguro permitido por defecto.
+
+El gateway también publica el registry en `/v2/` (ver tabla de rutas arriba), así que quien no esté en la misma máquina (por ejemplo, para traer las imágenes desde AWS) puede usar la URL del gateway o del túnel en vez de abrir el puerto 5000:
+
+```bash
+docker pull midominio.com/urbanalert/reportes:latest   # a través del gateway/túnel, sin :5000
+```
+
+⚠️ El registry no tiene autenticación: quien llegue al gateway puede hacer push y pull de cualquier imagen. Para algo más que una demo, protegerlo igual que se sugiere para la API (Cloudflare Access en el túnel con nombre).
+
+Llevar esas imágenes de este registry a AWS (ECR u otro) es un paso aparte, no cubierto aquí.
 
 ## Detalles
 

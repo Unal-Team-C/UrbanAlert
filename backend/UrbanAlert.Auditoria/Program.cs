@@ -1,3 +1,4 @@
+using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Text;
 using Amazon;
@@ -102,20 +103,26 @@ builder.Services.AddAuthorization();
 if (builder.Configuration.GetValue<bool>("RabbitMq:Enabled"))
 {
     string rabbitHost = builder.Configuration["RabbitMq:Host"] ?? "localhost";
+    ushort rabbitPort = builder.Configuration.GetValue<ushort?>("RabbitMq:Port") ?? 5672;
     string virtualHost = builder.Configuration["RabbitMq:VirtualHost"] ?? "/";
     string username = builder.Configuration["RabbitMq:Username"] ?? "guest";
     string password = builder.Configuration["RabbitMq:Password"] ?? "guest";
     string queue = builder.Configuration["RabbitMq:Queue"] ?? "q_auditoria_dotnet";
+    // Amazon MQ (RabbitMQ administrado) exige TLS en el 5671; el RabbitMQ local no lo soporta.
+    bool rabbitUsarTls = builder.Configuration.GetValue<bool>("RabbitMq:UseSsl");
 
     builder.Services.AddMassTransit(registration =>
     {
         registration.AddConsumer<ReporteCreadoConsumer>();
         registration.UsingRabbitMq((context, bus) =>
         {
-            bus.Host(rabbitHost, virtualHost, host =>
+            bus.Host(rabbitHost, rabbitPort, virtualHost, host =>
             {
                 host.Username(username);
                 host.Password(password);
+
+                if (rabbitUsarTls)
+                    host.UseSsl(s => s.Protocol = SslProtocols.Tls12);
             });
             bus.ConfigureJsonSerializerOptions(CodigosEnum.ConfigurarMensajeria);
             bus.ReceiveEndpoint(queue, endpoint =>

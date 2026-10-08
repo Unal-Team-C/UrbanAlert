@@ -100,6 +100,7 @@ services:
       retries: 20
 
   reportes:
+    image: localhost:${REGISTRY_PORT:-5000}/urbanalert/reportes:${IMAGE_TAG:-latest}
     build:
       context: ../backend/UrbanAlert.Reportes
       dockerfile: deploy/docker/Dockerfile
@@ -107,9 +108,12 @@ services:
       # Development: aplica las migraciones al arrancar y publica Scalar en /scalar/v1.
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Postgres: Host=postgres-reportes;Port=5432;Database=urbanalert_reportes;Username=${REPORTES_DB_USER:-urbanalert};Password=${REPORTES_DB_PASSWORD:-urbanalert}
-      RabbitMq__Host: rabbitmq
+      RabbitMq__Host: ${RABBITMQ_HOST:-rabbitmq}
+      RabbitMq__Port: ${RABBITMQ_PORT:-5672}
       RabbitMq__Username: ${RABBITMQ_USER:-urbanalert}
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-urbanalert}
+      # true solo para Amazon MQ u otro broker que exija TLS (puerto 5671). El RabbitMQ local no lo soporta.
+      RabbitMq__UseSsl: ${RABBITMQ_USE_SSL:-false}
       Geoespacial__BaseUrl: http://geoespacial-api:8000
     networks: [backend, data-reportes]
     depends_on:
@@ -121,6 +125,7 @@ services:
         condition: service_healthy
 
   auditoria:
+    image: localhost:${REGISTRY_PORT:-5000}/urbanalert/auditoria:${IMAGE_TAG:-latest}
     build:
       context: ../backend
       dockerfile: UrbanAlert.Auditoria/Dockerfile
@@ -135,9 +140,12 @@ services:
       ConnectionStrings__AuditReader: Host=postgres-reportes;Port=5432;Database=urbanalert_auditoria;Username=audit_reader;Password=${AUDIT_READER_PASSWORD:-audit_reader}
       ConnectionStrings__CorePostgres: Host=postgres-reportes;Port=5432;Database=urbanalert_reportes;Username=reportes_reader;Password=${REPORTES_READER_PASSWORD:-reportes_reader}
       RabbitMq__Enabled: "true"
-      RabbitMq__Host: rabbitmq
+      RabbitMq__Host: ${RABBITMQ_HOST:-rabbitmq}
+      RabbitMq__Port: ${RABBITMQ_PORT:-5672}
       RabbitMq__Username: ${RABBITMQ_USER:-urbanalert}
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-urbanalert}
+      # true solo para Amazon MQ u otro broker que exija TLS (puerto 5671). El RabbitMQ local no lo soporta.
+      RabbitMq__UseSsl: ${RABBITMQ_USE_SSL:-false}
     networks: [backend, data-reportes]
     depends_on:
       postgres-reportes:
@@ -165,6 +173,7 @@ services:
       retries: 20
 
   geoespacial-api:
+    image: localhost:${REGISTRY_PORT:-5000}/urbanalert/geoespacial-api:${IMAGE_TAG:-latest}
     build:
       context: ../backend/UrbanAlert.Geoespacial
       target: runtime
@@ -198,6 +207,7 @@ services:
       retries: 20
 
   usuarios:
+    image: localhost:${REGISTRY_PORT:-5000}/urbanalert/usuarios:${IMAGE_TAG:-latest}
     build:
       context: ../backend/UrbanAlert.Usuarios
       dockerfile: deploy/docker/Dockerfile
@@ -211,6 +221,65 @@ services:
       postgres-usuarios:
         condition: service_healthy
 
+  # --------------------------------------------------------- Registry propio
+  # Imágenes ya construidas para publicar desde otro lado (p. ej. subirlas luego a AWS),
+  # en vez de compilarlas in situ con --build. No se levanta con "docker compose up -d":
+  # solo con su perfil.
+  #   docker compose --profile registry up -d
+  #   docker compose build reportes auditoria geoespacial-api usuarios
+  #   docker compose push  reportes auditoria geoespacial-api usuarios
+  # "localhost:5000" funciona sin tocar daemon.json: Docker trata localhost/127.0.0.1
+  # como registry inseguro permitido por defecto.
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-urbanalert}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-urbanalert123}
+    volumes:
+      - minio-data:/data
+    networks: [registry-net]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    profiles: [registry]
+
+  # Un solo uso: crea el bucket del registry en MinIO (el driver S3 no lo crea solo).
+  minio-init:
+    image: minio/mc:latest
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-urbanalert} ${MINIO_ROOT_PASSWORD:-urbanalert123} &&
+      mc mb -p local/urbanalert-registry
+      "
+    networks: [registry-net]
+    depends_on:
+      minio:
+        condition: service_healthy
+    profiles: [registry]
+
+  registry:
+    image: registry:2
+    environment:
+      REGISTRY_STORAGE: s3
+      REGISTRY_STORAGE_S3_ACCESSKEY: ${MINIO_ROOT_USER:-urbanalert}
+      REGISTRY_STORAGE_S3_SECRETKEY: ${MINIO_ROOT_PASSWORD:-urbanalert123}
+      REGISTRY_STORAGE_S3_REGION: us-east-1
+      REGISTRY_STORAGE_S3_REGIONENDPOINT: http://minio:9000
+      REGISTRY_STORAGE_S3_BUCKET: urbanalert-registry
+      REGISTRY_STORAGE_S3_SECURE: "false"
+      REGISTRY_STORAGE_S3_FORCEPATHSTYLE: "true"
+      REGISTRY_STORAGE_S3_V4AUTH: "true"
+    ports:
+      - "${REGISTRY_PORT:-5000}:5000"
+    networks: [registry-net]
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    profiles: [registry]
+
 # edge: gateway <-> frontend. backend: gateway <-> APIs y RabbitMQ.
 # data-*: cada API solo alcanza su propia base de datos.
 networks:
@@ -219,9 +288,11 @@ networks:
   data-reportes:
   data-geoespacial:
   data-usuarios:
+  registry-net:
 
 volumes:
   rabbitmq-data:
   postgres-reportes-data:
   geoespacial-db-data:
   postgres-usuarios-data:
+  minio-data:

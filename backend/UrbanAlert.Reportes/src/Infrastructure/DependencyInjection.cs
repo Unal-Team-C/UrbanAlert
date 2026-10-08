@@ -1,3 +1,4 @@
+using System.Security.Authentication;
 using System.Text.Json.Serialization;
 using Application.Comun;
 using Application.Interfaces.Eventos;
@@ -51,9 +52,12 @@ public static class DependencyInjection
     {
         string host = configuration["RabbitMq:Host"]
                       ?? throw new InvalidOperationException("No se encontró la configuración 'RabbitMq:Host'.");
+        ushort port = configuration.GetValue<ushort?>("RabbitMq:Port") ?? 5672;
         string virtualHost = configuration["RabbitMq:VirtualHost"] ?? "/";
         string usuario = configuration["RabbitMq:Username"] ?? "guest";
         string contrasena = configuration["RabbitMq:Password"] ?? "guest";
+        // Amazon MQ (RabbitMQ administrado) exige TLS en el 5671; el RabbitMQ local no lo soporta.
+        bool usarTls = configuration.GetValue<bool>("RabbitMq:UseSsl");
 
         services.AddMassTransit(x =>
         {
@@ -61,10 +65,13 @@ public static class DependencyInjection
 
             x.UsingRabbitMq((_, cfg) =>
             {
-                cfg.Host(host, virtualHost, h =>
+                cfg.Host(host, port, virtualHost, h =>
                 {
                     h.Username(usuario);
                     h.Password(contrasena);
+
+                    if (usarTls)
+                        h.UseSsl(s => s.Protocol = SslProtocols.Tls12);
                 });
 
                 // Los eventos usan la misma convención que la API: enums como códigos
