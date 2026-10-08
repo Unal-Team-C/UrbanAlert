@@ -77,7 +77,7 @@ export default function Home() {
   const [usuarioModalOpen, setUsuarioModalOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/api/reportes/catalogo")
+    fetch("/api/v1/reportes/catalogo")
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
@@ -94,7 +94,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/usuarios")
+    fetch("/api/v1/usuarios")
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
@@ -241,7 +241,7 @@ export default function Home() {
     reportData.append("imagen", image);
 
     try {
-      const response = await fetch("/api/reportes", {
+      const response = await fetch("/api/v1/reportes", {
         method: "POST",
         body: reportData,
       });

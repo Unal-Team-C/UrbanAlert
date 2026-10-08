@@ -1,19 +1,23 @@
 import type { NextConfig } from "next";
 
-// URLs de los servicios. El navegador llama a /api/reportes/... y /api/usuarios/... en el
-// mismo origen y Next.js reenvía la petición, así no hace falta CORS.
+// El navegador llama a /api/v1/reportes/... y /api/v1/usuarios/... en el mismo origen.
+// Con el compose, el gateway atiende esas rutas antes de llegar aquí. Sin gateway
+// (npm run dev), estos rewrites las reenvían directo a cada servicio, así no hace falta
+// CORS. Se lee en `next build`.
 const reportesApiUrl = process.env.REPORTES_API_URL ?? "http://localhost:5039";
 const usuariosApiUrl = process.env.USUARIOS_API_URL ?? "http://localhost:8081";
 
 const nextConfig: NextConfig = {
+  // Imagen de Docker mínima: .next/standalone incluye server.js y solo los módulos necesarios.
+  output: "standalone",
   rewrites() {
     return [
       {
-        source: "/api/reportes/:path*",
+        source: "/api/v1/reportes/:path*",
         destination: `${reportesApiUrl}/api/v1/Reportes/:path*`,
       },
       {
-        source: "/api/usuarios/:path*",
+        source: "/api/v1/usuarios/:path*",
         destination: `${usuariosApiUrl}/api/v1/users/:path*`,
       },
     ];

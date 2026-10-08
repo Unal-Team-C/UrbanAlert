@@ -1,0 +1,227 @@
+# Entorno local completo de UrbanAlert.
+#   cd infrastructure && docker compose up -d --build
+# Único punto de entrada: el gateway en http://localhost:8080 (web en "/", APIs en "/api/v1/*").
+# Para exponer también los puertos de cada servicio (Scalar, Swagger, bases de datos, RabbitMQ):
+#   docker compose -f docker-compose.yml -f docker-compose.debug.yml up -d
+# Credenciales por defecto solo para desarrollo; se cambian con un .env (ver .env.example).
+
+name: urbanalert
+
+services:
+  # ---------------------------------------------------------------- Gateway
+  gateway:
+    image: nginx:1.29-alpine
+    environment:
+      GATEWAY_SHARED_SECRET: ${GATEWAY_SHARED_SECRET:-urbanalert-gateway-local}
+    volumes:
+      - ./gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    ports:
+      - "${GATEWAY_PORT:-8080}:80"
+    networks: [edge, backend]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    depends_on:
+      - frontend
+      - reportes
+      - auditoria
+      - geoespacial-api
+      - usuarios
+
+  # ---------------------------------------------------------------- Cloudflare Tunnel
+  # Publica el gateway en Internet sin abrir puertos de entrada. Solo con su perfil:
+  #   docker compose --profile tunnel up -d          túnel con nombre (token, dominio propio)
+  #   docker compose --profile tunnel-rapido up -d   Quick Tunnel (sin cuenta, URL *.trycloudflare.com)
+  # La API no tiene autenticación: con el túnel con nombre, proteger el hostname con Cloudflare Access.
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      # Token del túnel (panel de Cloudflare > Zero Trust > Networks > Tunnels), en .env.
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    networks: [edge]
+    restart: unless-stopped
+    depends_on:
+      - gateway
+    profiles: [tunnel]
+
+  tunnel-rapido:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --url http://gateway:80
+    networks: [edge]
+    depends_on:
+      - gateway
+    profiles: [tunnel-rapido]
+
+  # ---------------------------------------------------------------- Frontend
+  frontend:
+    build:
+      context: ../frontend/reportes-front
+    # Llama a /api/v1/* en el mismo origen: el gateway lo enruta, el frontend no ve los servicios.
+    networks: [edge]
+
+  # ---------------------------------------------------------------- Mensajería
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-urbanalert}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-urbanalert}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ------------------------------------------------- Reportes + Auditoria
+  # Un PostgreSQL con dos bases: urbanalert_reportes y urbanalert_auditoria.
+  postgres-reportes:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: urbanalert_reportes
+      POSTGRES_USER: ${REPORTES_DB_USER:-urbanalert}
+      POSTGRES_PASSWORD: ${REPORTES_DB_PASSWORD:-urbanalert}
+      AUDIT_WRITER_PASSWORD: ${AUDIT_WRITER_PASSWORD:-audit_writer}
+      AUDIT_READER_PASSWORD: ${AUDIT_READER_PASSWORD:-audit_reader}
+      REPORTES_READER_PASSWORD: ${REPORTES_READER_PASSWORD:-reportes_reader}
+    volumes:
+      - postgres-reportes-data:/var/lib/postgresql/data
+      - ./postgres-reportes/01-auditoria.sh:/docker-entrypoint-initdb.d/01-auditoria.sh:ro
+      - ../backend/UrbanAlert.Auditoria/database:/auditoria-sql:ro
+    networks: [data-reportes]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  reportes:
+    build:
+      context: ../backend/UrbanAlert.Reportes
+      dockerfile: deploy/docker/Dockerfile
+    environment:
+      # Development: aplica las migraciones al arrancar y publica Scalar en /scalar/v1.
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Postgres: Host=postgres-reportes;Port=5432;Database=urbanalert_reportes;Username=${REPORTES_DB_USER:-urbanalert};Password=${REPORTES_DB_PASSWORD:-urbanalert}
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-urbanalert}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-urbanalert}
+      Geoespacial__BaseUrl: http://geoespacial-api:8000
+    networks: [backend, data-reportes]
+    depends_on:
+      postgres-reportes:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      geoespacial-api:
+        condition: service_healthy
+
+  auditoria:
+    build:
+      context: ../backend
+      dockerfile: UrbanAlert.Auditoria/Dockerfile
+    environment:
+      # Development: no exige Cognito para arrancar. Sí exige la clave del gateway.
+      ASPNETCORE_ENVIRONMENT: Development
+      Gateway__SharedSecret: ${GATEWAY_SHARED_SECRET:-urbanalert-gateway-local}
+      # Modo de desarrollo sin Cognito: identidad por headers X-Usuario-Id / X-Usuario-Rol
+      # (por defecto admin). Apagado salvo AUDITORIA_MODO_DESARROLLO=true en el .env.
+      Autenticacion__ModoDesarrollo: ${AUDITORIA_MODO_DESARROLLO:-false}
+      ConnectionStrings__AuditWriter: Host=postgres-reportes;Port=5432;Database=urbanalert_auditoria;Username=audit_writer;Password=${AUDIT_WRITER_PASSWORD:-audit_writer}
+      ConnectionStrings__AuditReader: Host=postgres-reportes;Port=5432;Database=urbanalert_auditoria;Username=audit_reader;Password=${AUDIT_READER_PASSWORD:-audit_reader}
+      ConnectionStrings__CorePostgres: Host=postgres-reportes;Port=5432;Database=urbanalert_reportes;Username=reportes_reader;Password=${REPORTES_READER_PASSWORD:-reportes_reader}
+      RabbitMq__Enabled: "true"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-urbanalert}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-urbanalert}
+    networks: [backend, data-reportes]
+    depends_on:
+      postgres-reportes:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------- Geoespacial
+  geoespacial-db:
+    build:
+      context: ../backend/UrbanAlert.Geoespacial/db
+    environment:
+      POSTGRES_USER: ${GEOESPACIAL_DB_USER:-geospatial}
+      POSTGRES_PASSWORD: ${GEOESPACIAL_DB_PASSWORD:-geospatial}
+      POSTGRES_DB: geospatial
+    volumes:
+      - geoespacial-db-data:/var/lib/postgresql/data
+      - ../backend/UrbanAlert.Geoespacial/db:/geospatial-db:ro
+      - ../backend/UrbanAlert.Geoespacial/db/init/01_init.sh:/docker-entrypoint-initdb.d/20_geospatial.sh:ro
+    networks: [data-geoespacial]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  geoespacial-api:
+    build:
+      context: ../backend/UrbanAlert.Geoespacial
+      target: runtime
+    environment:
+      DATABASE_URL: postgresql://${GEOESPACIAL_DB_USER:-geospatial}:${GEOESPACIAL_DB_PASSWORD:-geospatial}@geoespacial-db:5432/geospatial
+    networks: [backend, data-geoespacial]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    depends_on:
+      geoespacial-db:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------- Usuarios
+  postgres-usuarios:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: urbanalert_users
+      POSTGRES_USER: ${USUARIOS_DB_USER:-urbanalert}
+      POSTGRES_PASSWORD: ${USUARIOS_DB_PASSWORD:-urbanalert}
+    volumes:
+      - postgres-usuarios-data:/var/lib/postgresql/data
+    networks: [data-usuarios]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  usuarios:
+    build:
+      context: ../backend/UrbanAlert.Usuarios
+      dockerfile: deploy/docker/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_URL: jdbc:postgresql://postgres-usuarios:5432/urbanalert_users
+      DB_USERNAME: ${USUARIOS_DB_USER:-urbanalert}
+      DB_PASSWORD: ${USUARIOS_DB_PASSWORD:-urbanalert}
+    networks: [backend, data-usuarios]
+    depends_on:
+      postgres-usuarios:
+        condition: service_healthy
+
+# edge: gateway <-> frontend. backend: gateway <-> APIs y RabbitMQ.
+# data-*: cada API solo alcanza su propia base de datos.
+networks:
+  edge:
+  backend:
+  data-reportes:
+  data-geoespacial:
+  data-usuarios:
+
+volumes:
+  rabbitmq-data:
+  postgres-reportes-data:
+  geoespacial-db-data:
+  postgres-usuarios-data:
