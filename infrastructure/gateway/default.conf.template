@@ -72,6 +72,18 @@ server {
         proxy_pass $auditoria;
     }
 
+    # ---------------------------------------------------------------- Multimedia
+    # Las imágenes las sirve MinIO directamente, sin pasar por la función (el bucket solo
+    # permite leer objetos sueltos por su clave); el gateway solo expone ese bucket al público,
+    # igual que el resto de servicios.
+    location /urbanalert-images/ {
+        limit_except GET {
+            deny all;
+        }
+        set $minio http://minio:9000;
+        proxy_pass $minio;
+    }
+
     # ---------------------------------------------------------------- Documentación
     # Scalar (Reportes, Auditoria) y Swagger UI (Usuarios, Geoespacial) en /docs/<servicio>.
     # El gateway quita el prefijo y reescribe las URLs absolutas que generan los servicios
