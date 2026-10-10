@@ -28,6 +28,7 @@ Las credenciales tienen valores por defecto **solo para desarrollo**. Para cambi
 | `/api/v1/geoespacial/coordinates/{id}` | `geoespacial-api:8000/api/v1/geospatial/coordinates/{id}` | **Solo GET**: consulta una coordenada por su id (`idCoordenada` del reporte) |
 | `/api/v1/usuarios/*` | `usuarios:8080/api/v1/users/*` | |
 | `/api/v1/auditoria/*` | `auditoria:8080/auditoria/*` | El gateway agrega `X-Urban-Gateway-Key`; sin ella Auditoria responde 403 |
+| `/urbanalert-images/*` | `minio:9000/urbanalert-images/*` | **Solo GET**: imágenes de los reportes, servidas directo por MinIO (bucket de solo lectura por clave). Es `PUBLIC_IMAGE_BASE_URL` de Multimedia |
 | `/health` | — | Salud del gateway |
 
 Cualquier otra ruta bajo `/api/` responde 404. La configuración está en `gateway/default.conf.template`.
@@ -55,17 +56,19 @@ Solo el gateway publica un puerto en el host (`GATEWAY_PORT`, por defecto 8080).
 | `backend` | gateway, APIs, RabbitMQ | Rutas del gateway y comunicación entre servicios |
 | `data-reportes` | postgres-reportes, reportes, auditoria | Cada API alcanza solo su base de datos |
 | `data-geoespacial` | geoespacial-db, geoespacial-api | |
+| `data-multimedia` | minio, mongo, multimedia(-init), **gateway** | El gateway también entra: sirve las imágenes de MinIO directo, como un origen de CDN, no como la base de datos privada de un servicio |
 | `data-usuarios` | postgres-usuarios, usuarios | |
 
 ```
                  localhost:8080
                        │
                    gateway ─────────────── frontend            (edge)
-                       │
+                       │          └──────── minio (solo GET de imágenes)
      ┌─────────┬───────┴──────┬────────────────┐
   reportes  auditoria   geoespacial-api     usuarios           (backend, con rabbitmq)
      │  └── HTTP ──────────►  │                  │
      │  ReporteCreado ► rabbitmq ► auditoria     │
+     │  HTTP ► multimedia ► minio + mongo        │
      ▼                        ▼                  ▼
  postgres-reportes      geoespacial-db    postgres-usuarios    (data-*)
 ```

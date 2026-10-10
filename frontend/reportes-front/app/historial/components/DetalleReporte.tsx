@@ -9,6 +9,7 @@ import { formatearFecha } from "../../lib/formato";
 import type { Coordenada } from "../../lib/geoespacial";
 import type { Reporte } from "../../lib/reportes";
 import { nombreDeUsuario, type Usuario } from "../../lib/usuarios";
+import MapaUbicacion from "./MapaUbicacion";
 
 function Campo({ nombre, children }: { nombre: string; children: React.ReactNode }) {
   return (
@@ -58,16 +59,27 @@ export default function DetalleReporte({
           <Campo nombre="Descripción">{reporte.descripcion}</Campo>
         </div>
       </dl>
+
+      {coordenada && (
+        <div className="mt-4">
+          <p className="mb-2 text-sm text-gray-500">Ubicación en el mapa</p>
+          <MapaUbicacion lat={coordenada.coordinate.lat} lon={coordenada.coordinate.lon} />
+        </div>
+      )}
+
       {reporte.urlImagen && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={reporte.urlImagen}
-          alt="Imagen del reporte"
-          onError={(evento) => {
-            evento.currentTarget.style.display = "none"; // URL rota: no mostrar el ícono de imagen rota
-          }}
-          className="mt-4 max-h-96 rounded-lg object-contain"
-        />
+        <div className="mt-4">
+          <p className="mb-2 text-sm text-gray-500">Imagen</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={reporte.urlImagen}
+            alt="Imagen del reporte"
+            onError={(evento) => {
+              evento.currentTarget.style.display = "none"; // URL rota: no mostrar el ícono de imagen rota
+            }}
+            className="max-h-96 rounded-lg object-contain"
+          />
+        </div>
       )}
     </section>
   );
