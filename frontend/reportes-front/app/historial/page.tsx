@@ -84,8 +84,10 @@ function Historial() {
   return (
     <main className="mx-auto w-full max-w-6xl space-y-6 p-6">
       <header>
-        <h1 className="text-3xl font-bold text-gray-900">Histórico de reportes</h1>
-        <p className="text-gray-500">Vista de administrador de todos los reportes registrados.</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Histórico de reportes</h1>
+        <p className="text-gray-500 dark:text-gray-400">
+          Vista de administrador de todos los reportes registrados.
+        </p>
       </header>
 
       <TotalesGrid filtros={filtros} onSeleccionar={cambiarFiltro} />

@@ -4,25 +4,25 @@ import Link from "next/link";
 // Mismos estilos que el formulario de crear reporte.
 export default function Inicio() {
   return (
-    <main className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-      <div className="w-full max-w-5xl rounded-xl bg-white p-8 shadow-lg">
-        <h1 className="text-3xl font-bold text-gray-900">
+    <main className="min-h-screen bg-gray-100 dark:bg-gray-950 flex items-center justify-center p-6">
+      <div className="w-full max-w-5xl rounded-xl bg-white p-8 shadow-lg dark:bg-gray-900 dark:shadow-none dark:ring-1 dark:ring-gray-800">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
           Bienvenido a UrbanAlert
         </h1>
 
-        <p className="mt-2 mb-6 text-gray-500">
+        <p className="mt-2 mb-6 text-gray-500 dark:text-gray-400">
           Consulte los daños urbanos reportados en Bogotá o reporte uno nuevo.
         </p>
 
         <iframe
           src="/mapa"
           title="Mapa de daños reportados"
-          className="h-[60vh] min-h-[360px] w-full rounded-lg border border-gray-300"
+          className="h-[60vh] min-h-[360px] w-full rounded-lg border border-gray-300 dark:border-gray-700"
         />
 
         <Link
           href="/reportes/nuevo"
-          className="mt-6 block w-full rounded-lg bg-black py-3 text-center font-medium text-white hover:bg-gray-800"
+          className="mt-6 block w-full rounded-lg bg-black py-3 text-center font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
         >
           Crear reporte
         </Link>

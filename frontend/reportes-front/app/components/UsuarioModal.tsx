@@ -57,20 +57,24 @@ export default function UsuarioModal({ usuarios, actual, error, onSeleccionar, o
         role="dialog"
         aria-modal="true"
         aria-labelledby="usuario-titulo"
-        className="flex max-h-[85vh] w-full max-w-md flex-col rounded-xl bg-white shadow-xl"
+        className="flex max-h-[85vh] w-full max-w-md flex-col rounded-xl bg-white shadow-xl dark:bg-gray-900 dark:shadow-none dark:ring-1 dark:ring-gray-800"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="border-b border-gray-200 p-5">
-          <h2 id="usuario-titulo" className="text-lg font-bold text-gray-900">
+        <div className="border-b border-gray-200 p-5 dark:border-gray-800">
+          <h2 id="usuario-titulo" className="text-lg font-bold text-gray-900 dark:text-gray-100">
             ¿Quién reporta?
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Elija el usuario con el que se crearán los reportes.
           </p>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-3">
-          {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+          {error && (
+            <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+              {error}
+            </p>
+          )}
 
           <ul className="space-y-1">
             {usuarios.map((usuario) => {
@@ -81,16 +85,20 @@ export default function UsuarioModal({ usuarios, actual, error, onSeleccionar, o
                     type="button"
                     onClick={() => onSeleccionar(usuario)}
                     aria-current={elegido}
-                    className={`flex w-full items-center justify-between rounded-lg p-3 text-left hover:bg-gray-100 ${
-                      elegido ? "bg-gray-100 ring-1 ring-gray-900" : ""
+                    className={`flex w-full items-center justify-between rounded-lg p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                      elegido ? "bg-gray-100 ring-1 ring-gray-900 dark:bg-gray-800 dark:ring-gray-100" : ""
                     }`}
                   >
                     <span>
-                      <span className="block font-medium text-gray-900">{usuario.name}</span>
-                      <span className="block text-sm text-gray-500">{usuario.email}</span>
+                      <span className="block font-medium text-gray-900 dark:text-gray-100">
+                        {usuario.name}
+                      </span>
+                      <span className="block text-sm text-gray-500 dark:text-gray-400">
+                        {usuario.email}
+                      </span>
                     </span>
                     {usuario.role === "ADMIN" && (
-                      <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-700">
+                      <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-200">
                         Admin
                       </span>
                     )}
@@ -101,7 +109,7 @@ export default function UsuarioModal({ usuarios, actual, error, onSeleccionar, o
           </ul>
         </div>
 
-        <div className="border-t border-gray-200 p-5">
+        <div className="border-t border-gray-200 p-5 dark:border-gray-800">
           {agregando ? (
             <form onSubmit={handleCrear} className="space-y-3">
               <input
@@ -113,7 +121,7 @@ export default function UsuarioModal({ usuarios, actual, error, onSeleccionar, o
                 required
                 maxLength={200}
                 autoFocus
-                className="w-full rounded-lg border border-gray-300 p-3 text-gray-900"
+                className="w-full rounded-lg border border-gray-300 p-3 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
               />
               <input
                 type="email"
@@ -123,23 +131,23 @@ export default function UsuarioModal({ usuarios, actual, error, onSeleccionar, o
                 aria-label="Correo"
                 required
                 maxLength={300}
-                className="w-full rounded-lg border border-gray-300 p-3 text-gray-900"
+                className="w-full rounded-lg border border-gray-300 p-3 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
               />
 
-              {errorCrear && <p className="text-sm text-red-600">{errorCrear}</p>}
+              {errorCrear && <p className="text-sm text-red-600 dark:text-red-400">{errorCrear}</p>}
 
               <div className="flex gap-3">
                 <button
                   type="button"
                   onClick={() => setAgregando(false)}
-                  className="flex-1 rounded-lg border border-gray-300 py-3 font-medium text-gray-700 hover:bg-gray-50"
+                  className="flex-1 rounded-lg border border-gray-300 py-3 font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={guardando}
-                  className="flex-1 rounded-lg bg-black py-3 font-medium text-white hover:bg-gray-800 disabled:bg-gray-400"
+                  className="flex-1 rounded-lg bg-black py-3 font-medium text-white hover:bg-gray-800 disabled:bg-gray-400 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 dark:disabled:bg-gray-600 dark:disabled:text-gray-300"
                 >
                   {guardando ? "Guardando..." : "Agregar"}
                 </button>
@@ -149,7 +157,7 @@ export default function UsuarioModal({ usuarios, actual, error, onSeleccionar, o
             <button
               type="button"
               onClick={() => setAgregando(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 py-3 font-medium text-gray-700 hover:bg-gray-50"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 py-3 font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
             >
               <IconoAgregarUsuario />
               Agregar usuario

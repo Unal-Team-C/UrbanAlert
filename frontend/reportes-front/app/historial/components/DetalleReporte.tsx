@@ -13,8 +13,8 @@ import { nombreDeUsuario, type Usuario } from "../../lib/usuarios";
 function Campo({ nombre, children }: { nombre: string; children: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-sm text-gray-500">{nombre}</dt>
-      <dd className="text-gray-900">{children}</dd>
+      <dt className="text-sm text-gray-500 dark:text-gray-400">{nombre}</dt>
+      <dd className="text-gray-900 dark:text-gray-100">{children}</dd>
     </div>
   );
 }
@@ -33,8 +33,11 @@ export default function DetalleReporte({
   errorCoordenada?: boolean;
 }) {
   return (
-    <section aria-labelledby="titulo-detalle" className="rounded-xl bg-white p-6 shadow">
-      <h2 id="titulo-detalle" className="mb-4 text-xl font-semibold text-gray-900">
+    <section
+      aria-labelledby="titulo-detalle"
+      className="rounded-xl bg-white p-6 shadow dark:bg-gray-900 dark:shadow-none dark:ring-1 dark:ring-gray-800"
+    >
+      <h2 id="titulo-detalle" className="mb-4 text-xl font-semibold text-gray-900 dark:text-gray-100">
         {nombreTipo(catalogo, reporte.tipo)}
       </h2>
       <dl className="grid gap-4 sm:grid-cols-2">

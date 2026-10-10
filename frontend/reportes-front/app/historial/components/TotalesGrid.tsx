@@ -50,10 +50,12 @@ export default function TotalesGrid({
         aria-pressed={activa}
         onClick={() => onSeleccionar(tarjeta.filtro, activa ? "" : tarjeta.codigo)}
         className={`rounded-xl border p-4 text-left shadow-sm transition ${
-          activa ? "border-blue-600 bg-blue-50" : "border-gray-200 bg-white hover:border-gray-400"
+          activa
+            ? "border-blue-600 bg-blue-50 dark:border-blue-500 dark:bg-blue-950"
+            : "border-gray-200 bg-white hover:border-gray-400 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-600"
         }`}
       >
-        <span className="block text-sm text-gray-500">{tarjeta.nombre}</span>
+        <span className="block text-sm text-gray-500 dark:text-gray-400">{tarjeta.nombre}</span>
         {total === "error" ? (
           <span
             role="button"
@@ -63,12 +65,14 @@ export default function TotalesGrid({
               evento.stopPropagation();
               cargar([tarjeta]);
             }}
-            className="text-2xl font-semibold text-red-600"
+            className="text-2xl font-semibold text-red-600 dark:text-red-400"
           >
             —
           </span>
         ) : (
-          <span className="text-2xl font-semibold text-gray-900">{total ?? "…"}</span>
+          <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+            {total ?? "…"}
+          </span>
         )}
       </button>
     );
@@ -77,13 +81,15 @@ export default function TotalesGrid({
   return (
     <section aria-label="Totales" className="space-y-4">
       <div>
-        <h2 className="mb-2 text-sm font-semibold uppercase text-gray-500">Por estado</h2>
+        <h2 className="mb-2 text-sm font-semibold uppercase text-gray-500 dark:text-gray-400">
+          Por estado
+        </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {TARJETAS.filter((t) => t.filtro === "estado").map(renderTarjeta)}
         </div>
       </div>
       <div>
-        <h2 className="mb-2 text-sm font-semibold uppercase text-gray-500">
+        <h2 className="mb-2 text-sm font-semibold uppercase text-gray-500 dark:text-gray-400">
           Por nivel de emergencia
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

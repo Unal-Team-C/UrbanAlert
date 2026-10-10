@@ -34,31 +34,31 @@ export default function ReporteCreadoModal({ idReporte, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="reporte-creado-titulo"
-        className="w-full max-w-sm rounded-xl bg-white p-6 text-center shadow-xl"
+        className="w-full max-w-sm rounded-xl bg-white p-6 text-center shadow-xl dark:bg-gray-900 dark:shadow-none dark:ring-1 dark:ring-gray-800"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-950">
           <svg
             aria-hidden="true"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth={2.5}
-            className="h-6 w-6 text-green-600"
+            className="h-6 w-6 text-green-600 dark:text-green-400"
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
 
-        <h2 id="reporte-creado-titulo" className="text-xl font-bold text-gray-900">
+        <h2 id="reporte-creado-titulo" className="text-xl font-bold text-gray-900 dark:text-gray-100">
           Reporte creado
         </h2>
 
-        <p className="mt-2 text-gray-600">
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
           Su reporte se registró correctamente.
         </p>
 
-        <p className="mt-3 text-xs text-gray-400">
+        <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
           Número de reporte:
           <span className="block font-mono">{idReporte}</span>
         </p>
@@ -67,7 +67,7 @@ export default function ReporteCreadoModal({ idReporte, onClose }: Props) {
           ref={botonRef}
           type="button"
           onClick={onClose}
-          className="mt-6 w-full rounded-lg bg-black py-3 font-medium text-white hover:bg-gray-800"
+          className="mt-6 w-full rounded-lg bg-black py-3 font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
         >
           Aceptar
         </button>

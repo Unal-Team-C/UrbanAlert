@@ -2,7 +2,8 @@ import { ESTADOS, NIVELES } from "../../lib/catalogo";
 import type { CategoriaCatalogo } from "../../lib/catalogo";
 import type { FiltrosReportes } from "../../lib/reportes";
 
-const CLASE = "rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900";
+const CLASE =
+  "rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 
 export default function FiltrosHistorial({
   filtros,
@@ -15,7 +16,7 @@ export default function FiltrosHistorial({
 }) {
   return (
     <div className="flex flex-wrap gap-3">
-      <label className="text-sm text-gray-700">
+      <label className="text-sm text-gray-700 dark:text-gray-300">
         <span className="mb-1 block">Estado</span>
         <select
           className={CLASE}
@@ -30,7 +31,7 @@ export default function FiltrosHistorial({
           ))}
         </select>
       </label>
-      <label className="text-sm text-gray-700">
+      <label className="text-sm text-gray-700 dark:text-gray-300">
         <span className="mb-1 block">Nivel de emergencia</span>
         <select
           className={CLASE}

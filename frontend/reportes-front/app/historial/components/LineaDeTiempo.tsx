@@ -63,8 +63,11 @@ export default function LineaDeTiempo({
   }
 
   return (
-    <section aria-labelledby="titulo-linea" className="rounded-xl bg-white p-6 shadow">
-      <h2 id="titulo-linea" className="mb-4 text-xl font-semibold text-gray-900">
+    <section
+      aria-labelledby="titulo-linea"
+      className="rounded-xl bg-white p-6 shadow dark:bg-gray-900 dark:shadow-none dark:ring-1 dark:ring-gray-800"
+    >
+      <h2 id="titulo-linea" className="mb-4 text-xl font-semibold text-gray-900 dark:text-gray-100">
         Línea de tiempo
       </h2>
 
@@ -79,18 +82,20 @@ export default function LineaDeTiempo({
         <Vacio texto="Sin eventos registrados." />
       ) : (
         <>
-          <ol className="space-y-4 border-l-2 border-gray-200 pl-4">
+          <ol className="space-y-4 border-l-2 border-gray-200 pl-4 dark:border-gray-700">
             {eventos.map((evento) => (
               <li key={evento.eventId}>
-                <p className="font-medium text-gray-900">{etiquetaEvento(evento.eventType)}</p>
-                <p className="text-sm text-gray-500">
+                <p className="font-medium text-gray-900 dark:text-gray-100">
+                  {etiquetaEvento(evento.eventType)}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {formatearFecha(evento.occurredAt)} · {nombreDeUsuario(usuarios, evento.actorId)}
                 </p>
               </li>
             ))}
           </ol>
           {errorMas && (
-            <p role="alert" className="mt-3 text-sm text-red-700">
+            <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-400">
               {errorMas}
             </p>
           )}
@@ -99,7 +104,7 @@ export default function LineaDeTiempo({
               type="button"
               onClick={cargarMas}
               disabled={cargandoMas}
-              className="mt-4 rounded-md border border-gray-300 px-3 py-1 text-sm disabled:opacity-50"
+              className="mt-4 rounded-md border border-gray-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-gray-700"
             >
               {cargandoMas ? "Cargando..." : "Cargar más"}
             </button>
