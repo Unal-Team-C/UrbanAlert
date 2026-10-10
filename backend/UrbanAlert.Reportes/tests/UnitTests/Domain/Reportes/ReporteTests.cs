@@ -101,6 +101,40 @@ public class ReporteTests
     }
 
     [Fact]
+    public void AsignarUrlImagen_GuardaLaUrl_SiElReporteNoTeniaUna()
+    {
+        Reporte reporte = new(Categoria, Tipo, "descripcion", null, "foto.jpg", Guid.NewGuid());
+
+        reporte.AsignarUrlImagen("https://multimedia.urbanalert.com/foto.jpg");
+
+        Assert.Equal("https://multimedia.urbanalert.com/foto.jpg", reporte.UrlImagen);
+    }
+
+    [Fact]
+    public void AsignarUrlImagen_LanzaExcepcion_SiLaUrlEsVacia()
+    {
+        Reporte reporte = new(Categoria, Tipo, "descripcion", null, "foto.jpg", Guid.NewGuid());
+
+        Assert.Throws<ArgumentException>(() => reporte.AsignarUrlImagen(""));
+    }
+
+    [Fact]
+    public void AsignarUrlImagen_LanzaExcepcion_SiLaUrlNoEsAbsoluta()
+    {
+        Reporte reporte = new(Categoria, Tipo, "descripcion", null, "foto.jpg", Guid.NewGuid());
+
+        Assert.Throws<ArgumentException>(() => reporte.AsignarUrlImagen("no-es-una-url"));
+    }
+
+    [Fact]
+    public void AsignarUrlImagen_LanzaExcepcion_SiYaTieneUrl()
+    {
+        Reporte reporte = CrearReporteValido();
+
+        Assert.Throws<InvalidOperationException>(() => reporte.AsignarUrlImagen("https://multimedia.urbanalert.com/foto.jpg"));
+    }
+
+    [Fact]
     public void Constructor_LanzaExcepcion_SiIdUsuarioEsVacio()
     {
         Assert.Throws<ArgumentException>(() => new Reporte(Categoria, Tipo, "descripcion", "https://imagenes.urbanalert.com/foto.jpg", null, Guid.Empty));

@@ -2,6 +2,7 @@ using Application.Imagenes;
 using Application.Interfaces.CrearReporte;
 using Application.Interfaces.Eventos;
 using Application.Interfaces.Geoespacial;
+using Application.Interfaces.Multimedia;
 using Application.Interfaces.Reportes;
 using Application.Reportes.Eventos;
 using Domain.Reportes;
@@ -12,15 +13,18 @@ public class CrearReporteHandler : ICrearReporteHandler
 {
     private readonly IReporteRepository _reporteRepository;
     private readonly IGeoespacialClient _geoespacialClient;
+    private readonly IMultimediaClient _multimediaClient;
     private readonly IEventPublisher _eventPublisher;
 
     public CrearReporteHandler(
         IReporteRepository reporteRepository,
         IGeoespacialClient geoespacialClient,
+        IMultimediaClient multimediaClient,
         IEventPublisher eventPublisher)
     {
         _reporteRepository = reporteRepository;
         _geoespacialClient = geoespacialClient;
+        _multimediaClient = multimediaClient;
         _eventPublisher = eventPublisher;
     }
 
@@ -31,17 +35,17 @@ public class CrearReporteHandler : ICrearReporteHandler
         Guid idUsuario = command.IdUsuario ?? Guid.NewGuid();
 
         string? nombreImagen = null;
+        FormatoImagen? formatoImagen = null;
         if (command.Imagen is not null)
         {
-            // Reportes recibe el archivo junto con el reporte. Por ahora se valida que sea una
-            // imagen y solo se guarda su nombre; más adelante el servicio de Multimedia vinculará
-            // la imagen y devolverá la ruta alojada, que se guardará como UrlImagen.
-            await ValidadorImagen.ValidarAsync(command.Imagen.Contenido, command.Imagen.Tamano, cancellationToken);
+            // Reportes valida el formato y tamaño localmente (sin red, falla rápido) antes de
+            // subir la imagen al servicio de Multimedia, que la aloja y devuelve su URL definitiva.
+            formatoImagen = await ValidadorImagen.ValidarAsync(command.Imagen.Contenido, command.Imagen.Tamano, cancellationToken);
             nombreImagen = NombreDeArchivo(command.Imagen.NombreArchivo);
         }
 
-        // Se valida el reporte antes de llamar a Geoespacial para no registrar
-        // coordenadas de reportes que nunca se van a crear.
+        // Se valida el reporte antes de subir la imagen a Multimedia o llamar a Geoespacial, para
+        // no subir imágenes ni registrar coordenadas de reportes que nunca se van a crear.
         Reporte reporte = new Reporte(
             command.Categoria,
             command.Tipo,
@@ -49,6 +53,20 @@ public class CrearReporteHandler : ICrearReporteHandler
             command.UrlImagen,
             nombreImagen,
             idUsuario);
+
+        if (command.Imagen is not null)
+        {
+            string urlImagen = await _multimediaClient.SubirImagenAsync(
+                command.Imagen.Contenido,
+                command.Imagen.Tamano,
+                nombreImagen!,
+                formatoImagen!.TipoContenido,
+                command.Latitud,
+                command.Longitud,
+                cancellationToken);
+
+            reporte.AsignarUrlImagen(urlImagen);
+        }
 
         Guid idCoordenada = await _geoespacialClient.AsignarCoordenadaAsync(
             reporte.Id, command.Latitud, command.Longitud, cancellationToken);

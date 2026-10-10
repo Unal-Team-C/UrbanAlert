@@ -114,13 +114,14 @@ public class ReportesController : ControllerBase
         Igual que crear un reporte, pero la imagen se sube como archivo
         en lugar de enviar su URL. Se envía como multipart/form-data con
         los campos categoria, tipo, descripcion, latitud, longitud,
-        idUsuario (opcional) e imagen (JPEG, PNG o WebP de hasta 10 MB; el formato se valida
+        idUsuario (opcional) e imagen (JPEG o PNG de hasta 3,5 MB; el formato se valida
         por el contenido del archivo).
 
-        Reportes recibe el archivo junto con el reporte. Por ahora solo
-        se guarda el nombre del archivo (nombreImagen); más adelante el
-        servicio de Multimedia vinculará la imagen y devolverá la ruta
-        alojada en urlImagen.
+        Reportes recibe el archivo junto con el reporte, lo sube de forma
+        síncrona al servicio Multimedia (que la aloja y devuelve su URL
+        definitiva, guardada en urlImagen) y guarda también el nombre
+        original del archivo (nombreImagen). Si Multimedia no está
+        disponible, el reporte no se crea (503).
         """)]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

@@ -2,9 +2,11 @@ using System.Text.Json.Serialization;
 using Application.Comun;
 using Application.Interfaces.Eventos;
 using Application.Interfaces.Geoespacial;
+using Application.Interfaces.Multimedia;
 using Application.Interfaces.Reportes;
 using Infrastructure.Geoespacial;
 using Infrastructure.Mensajeria;
+using Infrastructure.Multimedia;
 using Infrastructure.Persistencia;
 using Infrastructure.Persistencia.Repositorios;
 using MassTransit;
@@ -26,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IReporteRepository, ReporteRepository>();
 
         AgregarGeoespacial(services, configuration);
+        AgregarMultimedia(services, configuration);
         AgregarMassTransit(services, configuration);
 
         return services;
@@ -41,6 +44,22 @@ public static class DependencyInjection
         int timeoutSegundos = configuration.GetValue<int?>("Geoespacial:TimeoutSegundos") ?? 3;
 
         services.AddHttpClient<IGeoespacialClient, GeoespacialHttpClient>(client =>
+        {
+            client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(timeoutSegundos);
+        });
+    }
+
+    private static void AgregarMultimedia(IServiceCollection services, IConfiguration configuration)
+    {
+        string? baseUrl = configuration["Multimedia:BaseUrl"];
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            throw new InvalidOperationException("No se encontró la configuración 'Multimedia:BaseUrl'.");
+
+        // Timeout más alto que Geoespacial: incluye subir el archivo, no solo una consulta.
+        int timeoutSegundos = configuration.GetValue<int?>("Multimedia:TimeoutSegundos") ?? 10;
+
+        services.AddHttpClient<IMultimediaClient, MultimediaHttpClient>(client =>
         {
             client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(timeoutSegundos);
