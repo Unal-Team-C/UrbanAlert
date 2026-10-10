@@ -102,6 +102,7 @@ server {
 <li><a href="/docs/auditoria">Auditoría</a> (Scalar)</li>
 <li><a href="/docs/usuarios">Usuarios</a> (Swagger UI)</li>
 <li><a href="/docs/geoespacial">Geoespacial</a> (Swagger UI)</li>
+<li><a href="/docs/multimedia">Multimedia</a> (Scalar, contrato estático)</li>
 </ul></body></html>';
     }
 
@@ -109,6 +110,21 @@ server {
     location = /docs/auditoria   { return 302 /docs/auditoria/scalar/v1; }
     location = /docs/usuarios    { return 302 /docs/usuarios/swagger-ui/index.html; }
     location = /docs/geoespacial { return 302 /docs/geoespacial/docs; }
+
+    # Multimedia (Lambda, ENABLE_DOCS=false) no sirve su documentación en vivo: el contrato es
+    # el archivo estático docs/openapi.json del propio servicio (montado en el gateway), con
+    # Scalar vía CDN como visor, en vez de proxyear a una ruta que no existe.
+    location = /docs/multimedia {
+        default_type text/html;
+        return 200 '<!doctype html><html lang="es"><head><meta charset="utf-8"><title>UrbanAlert - Multimedia</title></head>
+<body><script id="api-reference" data-url="/docs/multimedia/openapi.json"></script>
+<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script></body></html>';
+    }
+
+    location = /docs/multimedia/openapi.json {
+        root /usr/share/nginx/html;
+        default_type application/json;
+    }
 
     location ~ ^/docs/reportes/(scalar|openapi|api/v1/Reportes)(/|$) {
         set $reportes http://reportes:8080;

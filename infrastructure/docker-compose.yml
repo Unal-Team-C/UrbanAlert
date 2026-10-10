@@ -29,6 +29,9 @@ services:
       GATEWAY_SHARED_SECRET: ${GATEWAY_SHARED_SECRET:-urbanalert-gateway-local}
     volumes:
       - ./gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      # Multimedia corre con ENABLE_DOCS=false (Lambda): su documentación es este archivo
+      # estático, no una ruta que el gateway pueda proxyear.
+      - ../backend/UrbanAlert.Multimedia/docs/openapi.json:/usr/share/nginx/html/docs/multimedia/openapi.json:ro
     ports:
       - "${GATEWAY_PORT:-8080}:80"
     # data-multimedia además de backend: el gateway lee las imágenes directamente de MinIO
