@@ -12,7 +12,6 @@ public class ValidadorImagenTests
     {
         { Jpeg, "image/jpeg", ".jpg" },
         { Png, "image/png", ".png" },
-        { Webp, "image/webp", ".webp" },
     };
 
     [Theory]
@@ -45,12 +44,11 @@ public class ValidadorImagenTests
     }
 
     [Fact]
-    public async Task ValidarAsync_RechazaUnRiffQueNoEsWebp()
+    public async Task ValidarAsync_RechazaUnWebp()
     {
-        byte[] wav = [.. "RIFF"u8, 0x24, 0x00, 0x00, 0x00, .. "WAVE"u8, .. "fmt "u8];
-
+        // Multimedia solo acepta JPEG y PNG: un WebP válido también se rechaza aquí.
         await Assert.ThrowsAsync<ImagenInvalidaException>(
-            () => ValidadorImagen.ValidarAsync(new MemoryStream(wav), wav.Length, CancellationToken.None));
+            () => ValidadorImagen.ValidarAsync(new MemoryStream(Webp), Webp.Length, CancellationToken.None));
     }
 
     [Fact]

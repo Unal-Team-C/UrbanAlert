@@ -7,6 +7,19 @@
 
 name: urbanalert
 
+x-multimedia-env: &multimedia-env
+  AWS_REGION: ${AWS_REGION:-us-east-1}
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-urbanalert}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-urbanalert-dev-secret}
+  AWS_ENDPOINT_URL_S3: http://minio:9000
+  S3_BUCKET: ${MULTIMEDIA_S3_BUCKET:-urbanalert-images}
+  S3_ADDRESSING_STYLE: path
+  # Alojada en MinIO, solo visible dentro de la red de Docker: falta un proxy del gateway
+  # para que el navegador pueda ver las imágenes directamente (seguimiento pendiente).
+  PUBLIC_IMAGE_BASE_URL: http://minio:9000/${MULTIMEDIA_S3_BUCKET:-urbanalert-images}
+  MONGODB_URI: mongodb://${MULTIMEDIA_DB_USER:-urbanalert}:${MULTIMEDIA_DB_PASSWORD:-urbanalert-dev-secret}@mongo:27017/?authSource=admin
+  MONGODB_DATABASE: multimedia
+
 services:
   # ---------------------------------------------------------------- Gateway
   gateway:
@@ -111,6 +124,7 @@ services:
       RabbitMq__Username: ${RABBITMQ_USER:-urbanalert}
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-urbanalert}
       Geoespacial__BaseUrl: http://geoespacial-api:8000
+      Multimedia__BaseUrl: http://multimedia:8080
     networks: [backend, data-reportes]
     depends_on:
       postgres-reportes:
@@ -119,6 +133,8 @@ services:
         condition: service_healthy
       geoespacial-api:
         condition: service_healthy
+      multimedia:
+        condition: service_started
 
   auditoria:
     build:
@@ -183,6 +199,69 @@ services:
       geoespacial-db:
         condition: service_healthy
 
+  # ---------------------------------------------------------------- Multimedia
+  minio:
+    # MinIO retiró sus imágenes oficiales; Chainguard la compila a diario desde el código fuente.
+    image: cgr.dev/chainguard/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-urbanalert}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-urbanalert-dev-secret}
+    volumes:
+      - multimedia-minio-data:/data
+    networks: [data-multimedia]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mongo:
+    # 7.0, no 8.0: mongod 8.0 se niega a arrancar en kernels >= 6.19
+    # (https://jira.mongodb.org/browse/SERVER-121912).
+    image: docker.io/library/mongo:7.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MULTIMEDIA_DB_USER:-urbanalert}
+      MONGO_INITDB_ROOT_PASSWORD: ${MULTIMEDIA_DB_PASSWORD:-urbanalert-dev-secret}
+    volumes:
+      - multimedia-mongo-data:/data/db
+    networks: [data-multimedia]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # Proceso de una sola ejecución: crea el bucket, su política y los índices de Mongo.
+  multimedia-init:
+    build:
+      context: ../backend/UrbanAlert.Multimedia
+      target: runtime
+    entrypoint: ["python", "-m", "app.admin.init_resources"]
+    environment: *multimedia-env
+    networks: [data-multimedia]
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+
+  multimedia:
+    build:
+      context: ../backend/UrbanAlert.Multimedia
+      target: runtime
+    environment:
+      <<: *multimedia-env
+      # Leídas por el RIE: reflejan los límites de gobernanza de la Lambda (512 MB, 15 s).
+      AWS_LAMBDA_FUNCTION_TIMEOUT: "15"
+      AWS_LAMBDA_FUNCTION_MEMORY_SIZE: "512"
+    networks: [backend, data-multimedia]
+    depends_on:
+      multimedia-init:
+        condition: service_completed_successfully
+
   # ---------------------------------------------------------------- Usuarios
   postgres-usuarios:
     image: postgres:16-alpine
@@ -220,10 +299,13 @@ networks:
   backend:
   data-reportes:
   data-geoespacial:
+  data-multimedia:
   data-usuarios:
 
 volumes:
   rabbitmq-data:
   postgres-reportes-data:
   geoespacial-db-data:
+  multimedia-minio-data:
+  multimedia-mongo-data:
   postgres-usuarios-data:

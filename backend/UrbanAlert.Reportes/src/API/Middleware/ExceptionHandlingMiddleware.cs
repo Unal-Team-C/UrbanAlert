@@ -1,5 +1,6 @@
 using System.Net;
 using Application.Geoespacial;
+using Application.Multimedia;
 using Domain.Reportes;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,6 +24,12 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             logger.LogWarning(ex, "No fue posible registrar la ubicación en Geoespacial.");
             context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
             await context.Response.WriteAsJsonAsync(new { message = "No fue posible registrar la ubicación del reporte. Intenta nuevamente más tarde." });
+        }
+        catch (MultimediaNoDisponibleException ex)
+        {
+            logger.LogWarning(ex, "No fue posible subir la imagen al servicio Multimedia.");
+            context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+            await context.Response.WriteAsJsonAsync(new { message = "No fue posible subir la imagen del reporte. Intenta nuevamente más tarde." });
         }
         catch (BadHttpRequestException ex)
         {

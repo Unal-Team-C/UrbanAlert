@@ -44,7 +44,9 @@ services:
       retries: 20
 
   mongo:
-    image: docker.io/library/mongo:8.0
+    # 7.0, no 8.0: mongod 8.0 se niega a arrancar en kernels >= 6.19
+    # (https://jira.mongodb.org/browse/SERVER-121912).
+    image: docker.io/library/mongo:7.0
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-urbanalert}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-urbanalert-dev-secret}

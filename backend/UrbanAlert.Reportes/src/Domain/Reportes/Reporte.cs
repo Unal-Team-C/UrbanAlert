@@ -20,11 +20,10 @@ public class Reporte
     public TipoReporte Tipo { get; private set; }
     public string Descripcion { get; private set; } = null!;
     public Guid IdCoordenada { get; private set; }
-    // Ruta donde está alojada la imagen. Hoy la envían los clientes que usan JSON; para las
-    // imágenes subidas desde el dispositivo la devolverá más adelante el servicio de Multimedia.
+    // Ruta donde está alojada la imagen. La envían directamente los clientes que usan JSON; para
+    // las imágenes subidas desde el dispositivo la devuelve el servicio Multimedia al subirlas.
     public string? UrlImagen { get; private set; }
-    // Nombre del archivo subido desde el dispositivo junto con el reporte. Por ahora solo se
-    // guarda el nombre; el servicio de Multimedia vinculará la imagen y completará UrlImagen.
+    // Nombre original del archivo subido desde el dispositivo junto con el reporte.
     public string? NombreImagen { get; private set; }
     public Guid IdUsuario { get; private set; }
     public NivelEmergencia NivelEmergencia { get; private set; }
@@ -94,6 +93,20 @@ public class Reporte
             throw new InvalidOperationException("El reporte ya tiene una coordenada asignada.");
 
         IdCoordenada = idCoordenada;
+    }
+
+    // La URL definitiva la emite el servicio Multimedia a partir del archivo subido, por eso se
+    // asigna después de construir (y validar) el reporte, igual que la coordenada de Geoespacial.
+    public void AsignarUrlImagen(string urlImagen)
+    {
+        if (string.IsNullOrWhiteSpace(urlImagen))
+            throw new ArgumentException("La URL de la imagen es obligatoria.", nameof(urlImagen));
+
+        if (UrlImagen is not null)
+            throw new InvalidOperationException("El reporte ya tiene una URL de imagen asignada.");
+
+        ValidarUrlImagen(urlImagen);
+        UrlImagen = urlImagen;
     }
 
     public void ActualizarEstado(EstadoReporte nuevoEstado)

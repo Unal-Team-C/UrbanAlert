@@ -306,7 +306,7 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
     }
 
     [Fact]
-    public async Task CrearReporte_ConArchivo_GuardaElNombreDeLaImagen()
+    public async Task CrearReporte_ConArchivo_SubeLaImagenAMultimediaYGuardaSuUrlYNombre()
     {
         HttpResponseMessage respuesta = await _client.PostAsync("/api/v1/Reportes", FormularioConImagen(ImagenPng, "hueco.png"));
         Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
@@ -315,7 +315,8 @@ public class ReportesEndpointsTests : IClassFixture<ReportesApiFactory>
         ReporteRespuesta? reporte = await _client.GetFromJsonAsync<ReporteRespuesta>($"/api/v1/Reportes/{creado!.IdReporte}");
 
         Assert.Equal("hueco.png", reporte!.NombreImagen);
-        Assert.Null(reporte.UrlImagen);
+        Assert.NotNull(reporte.UrlImagen);
+        Assert.StartsWith("https://multimedia.urbanalert.com/", reporte.UrlImagen);
     }
 
     [Fact]

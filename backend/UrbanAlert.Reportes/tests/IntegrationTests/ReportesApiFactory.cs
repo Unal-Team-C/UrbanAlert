@@ -1,5 +1,6 @@
 using Application.Geoespacial;
 using Application.Interfaces.Geoespacial;
+using Application.Interfaces.Multimedia;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -14,9 +15,12 @@ public class ReportesApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Development");
 
-        // Los tests de la API no dependen de que el servicio Geoespacial esté levantado.
+        // Los tests de la API no dependen de que Geoespacial ni Multimedia estén levantados.
         builder.ConfigureTestServices(services =>
-            services.RemoveAll<IGeoespacialClient>().AddSingleton<IGeoespacialClient, GeoespacialFalso>());
+        {
+            services.RemoveAll<IGeoespacialClient>().AddSingleton<IGeoespacialClient, GeoespacialFalso>();
+            services.RemoveAll<IMultimediaClient>().AddSingleton<IMultimediaClient, MultimediaFalso>();
+        });
     }
 
     private sealed class GeoespacialFalso : IGeoespacialClient
@@ -29,5 +33,13 @@ public class ReportesApiFactory : WebApplicationFactory<Program>
 
             return Task.FromResult(Guid.CreateVersion7());
         }
+    }
+
+    private sealed class MultimediaFalso : IMultimediaClient
+    {
+        public Task<string> SubirImagenAsync(
+            Stream contenido, long tamano, string nombreArchivo, string tipoContenido,
+            double? latitud, double? longitud, CancellationToken cancellationToken) =>
+            Task.FromResult($"https://multimedia.urbanalert.com/{Guid.NewGuid()}.jpg");
     }
 }

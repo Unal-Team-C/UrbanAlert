@@ -2,7 +2,9 @@ using Application.Geoespacial;
 using Application.Imagenes;
 using Application.Interfaces.Eventos;
 using Application.Interfaces.Geoespacial;
+using Application.Interfaces.Multimedia;
 using Application.Interfaces.Reportes;
+using Application.Multimedia;
 using Application.Reportes.CrearReporte;
 using Application.Reportes.Eventos;
 using Domain.Reportes;
@@ -14,9 +16,10 @@ public class CrearReporteHandlerTests
 {
     private readonly RepositorioFalso _repositorio = new();
     private readonly GeoespacialFalso _geoespacial = new();
+    private readonly MultimediaFalso _multimedia = new();
     private readonly PublicadorFalso _publicador = new();
 
-    private CrearReporteHandler CrearHandler() => new(_repositorio, _geoespacial, _publicador);
+    private CrearReporteHandler CrearHandler() => new(_repositorio, _geoespacial, _multimedia, _publicador);
 
     private static CrearReporteCommand ComandoValido() => new(
         CategoriaReporte.ViasYAndenes,
@@ -93,7 +96,7 @@ public class CrearReporteHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ConArchivo_GuardaSoloElNombreDeLaImagen()
+    public async Task Handle_ConArchivo_SubeLaImagenAMultimediaYGuardaSuUrlYNombre()
     {
         CrearReporteCommand comando = ComandoValido() with
         {
@@ -105,17 +108,56 @@ public class CrearReporteHandlerTests
 
         Reporte guardado = Assert.Single(_repositorio.Agregados);
         Assert.Equal("foto.png", guardado.NombreImagen);
-        Assert.Null(guardado.UrlImagen);
+        Assert.Equal(_multimedia.UrlImagenDevuelta, guardado.UrlImagen);
+
+        (string nombreArchivo, double? latitud, double? longitud) = Assert.Single(_multimedia.Llamadas);
+        Assert.Equal("foto.png", nombreArchivo);
+        Assert.Equal(4.6512, latitud);
+        Assert.Equal(-74.0561, longitud);
     }
 
     [Fact]
-    public async Task Handle_NoLlamaAGeoespacial_SiElArchivoNoEsUnaImagen()
+    public async Task Handle_NoLlamaAGeoespacialNiAMultimedia_SiElArchivoNoEsUnaImagen()
     {
         byte[] texto = "no soy una imagen"u8.ToArray();
         CrearReporteCommand comando = ComandoValido() with
         {
             UrlImagen = null,
             Imagen = new ImagenAdjunta(new MemoryStream(texto), texto.Length, "foto.png")
+        };
+
+        await Assert.ThrowsAsync<ImagenInvalidaException>(() => CrearHandler().Handle(comando, CancellationToken.None));
+
+        Assert.Empty(_multimedia.Llamadas);
+        Assert.Empty(_geoespacial.Llamadas);
+        Assert.Empty(_repositorio.Agregados);
+    }
+
+    [Fact]
+    public async Task Handle_NoLlamaAGeoespacialNiGuarda_SiMultimediaNoEstaDisponible()
+    {
+        _multimedia.ExcepcionALanzar = new MultimediaNoDisponibleException("caído");
+        CrearReporteCommand comando = ComandoValido() with
+        {
+            UrlImagen = null,
+            Imagen = new ImagenAdjunta(new MemoryStream(ValidadorImagenTests.Png), ValidadorImagenTests.Png.Length, "foto.png")
+        };
+
+        await Assert.ThrowsAsync<MultimediaNoDisponibleException>(() => CrearHandler().Handle(comando, CancellationToken.None));
+
+        Assert.Empty(_geoespacial.Llamadas);
+        Assert.Empty(_repositorio.Agregados);
+        Assert.Empty(_publicador.Eventos);
+    }
+
+    [Fact]
+    public async Task Handle_NoGuarda_SiMultimediaRechazaLaImagen()
+    {
+        _multimedia.ExcepcionALanzar = new ImagenInvalidaException("tamaño inválido");
+        CrearReporteCommand comando = ComandoValido() with
+        {
+            UrlImagen = null,
+            Imagen = new ImagenAdjunta(new MemoryStream(ValidadorImagenTests.Png), ValidadorImagenTests.Png.Length, "foto.png")
         };
 
         await Assert.ThrowsAsync<ImagenInvalidaException>(() => CrearHandler().Handle(comando, CancellationToken.None));
@@ -158,6 +200,23 @@ public class CrearReporteHandlerTests
         {
             Llamadas.Add((idReporte, latitud, longitud));
             return ExcepcionALanzar is null ? Task.FromResult(IdCoordenadaDevuelto) : Task.FromException<Guid>(ExcepcionALanzar);
+        }
+    }
+
+    private sealed class MultimediaFalso : IMultimediaClient
+    {
+        public string UrlImagenDevuelta { get; } = "https://multimedia.urbanalert.com/" + Guid.NewGuid() + ".jpg";
+        public Exception? ExcepcionALanzar { get; set; }
+        public List<(string NombreArchivo, double? Latitud, double? Longitud)> Llamadas { get; } = [];
+
+        public Task<string> SubirImagenAsync(
+            Stream contenido, long tamano, string nombreArchivo, string tipoContenido,
+            double? latitud, double? longitud, CancellationToken cancellationToken)
+        {
+            Llamadas.Add((nombreArchivo, latitud, longitud));
+            return ExcepcionALanzar is null
+                ? Task.FromResult(UrlImagenDevuelta)
+                : Task.FromException<string>(ExcepcionALanzar);
         }
     }
 

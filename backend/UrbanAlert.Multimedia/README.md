@@ -47,7 +47,7 @@ podman compose up -d --build
 | Servicio | Puerto en el host | Descripción |
 |---|---|---|
 | `minio` | 9000 (API S3) · 9001 (consola) | Almacenamiento de imágenes. Imagen `cgr.dev/chainguard/minio`: MinIO retiró sus imágenes oficiales (plan D-004) |
-| `mongo` | 27017 | MongoDB 8: base `multimedia`, colección `images` |
+| `mongo` | 27017 | MongoDB 7: base `multimedia`, colección `images` (7, no 8: mongod 8.0 no arranca en kernels >= 6.19, [SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912)) |
 | `init` | — | Proceso de una sola ejecución: crea el bucket, su política (solo lectura de objetos) y los índices. Termina con `Exited (0)` |
 | `multimedia` | 9010 | La función, en la imagen oficial de Lambda con el *Runtime Interface Emulator*. Arranca cuando `init` termina bien |
 
