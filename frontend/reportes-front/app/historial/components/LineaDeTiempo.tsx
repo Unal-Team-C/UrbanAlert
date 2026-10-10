@@ -8,7 +8,7 @@ import {
   type LineaDeTiempo as Linea,
 } from "../../lib/auditoria";
 import { nombreDeUsuario, type Usuario } from "../../lib/usuarios";
-import { useCarga } from "../useCarga";
+import { useCarga } from "../../lib/useCarga";
 import { Cargando, ErrorReintentar, Vacio } from "./Estados";
 
 // Textos de eventos conocidos (códigos tal como los emite Auditoría); cualquier otro tipo

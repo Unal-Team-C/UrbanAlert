@@ -155,7 +155,9 @@ services:
       POSTGRES_DB: geospatial
     volumes:
       - geoespacial-db-data:/var/lib/postgresql/data
-      - ../backend/UrbanAlert.Geoespacial/db:/geospatial-db:ro
+      # Solo el esquema: sin seed.sql (20 000 puntos sintéticos sin reporte en Reportes), el
+      # mapa muestra solo ubicaciones de reportes reales. El compose del propio servicio sí lo carga.
+      - ../backend/UrbanAlert.Geoespacial/db/schema.sql:/geospatial-db/schema.sql:ro
       - ../backend/UrbanAlert.Geoespacial/db/init/01_init.sh:/docker-entrypoint-initdb.d/20_geospatial.sh:ro
     networks: [data-geoespacial]
     healthcheck:

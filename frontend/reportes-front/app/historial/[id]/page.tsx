@@ -9,7 +9,7 @@ import { Cargando, ErrorReintentar } from "../components/Estados";
 import DetalleReporte from "../components/DetalleReporte";
 import LineaDeTiempo from "../components/LineaDeTiempo";
 import VerificacionIntegridad from "../components/VerificacionIntegridad";
-import { useCarga } from "../useCarga";
+import { useCarga } from "../../lib/useCarga";
 
 export default function DetalleReportePage({ params }: PageProps<"/historial/[id]">) {
   const { id } = use(params);
