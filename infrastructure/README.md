@@ -126,6 +126,7 @@ Requiere una cuenta de Cloudflare y un dominio administrado en ella.
 - **Recursos**: al menos 4 GB de RAM y 2 vCPU. Construir las imágenes allí tarda varios minutos.
 - **Credenciales**: definir contraseñas propias en `.env`, no usar los valores por defecto.
 - **Puerto del gateway**: el túnel no lo necesita. Para no exponerlo en la red de la máquina: `GATEWAY_PORT=127.0.0.1:8080`.
+- **URL pública de las imágenes**: fijar `GATEWAY_PUBLIC_URL` en el `.env` al dominio del túnel (p. ej. `https://urbanalert.midominio.com`, sin `/` al final). Sin esto, las imágenes de los reportes quedan con `http://localhost:8080/...`, que solo funciona para quien abre el navegador en esa misma máquina.
 - **Modo debug**: **no** combinar `docker-compose.debug.yml` con el túnel. Para revisar bases de datos o RabbitMQ en la máquina remota, usar un túnel SSH.
 
 ## Detalles
