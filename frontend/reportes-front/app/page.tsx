@@ -284,47 +284,48 @@ export default function Home() {
   }
 
   return (
-    <main className="relative min-h-screen bg-gray-100 flex items-center justify-center p-6 pt-20 sm:pt-6">
+    <main className="relative min-h-screen bg-gray-100 dark:bg-gray-950 flex items-center justify-center p-6 pt-20 sm:pt-6">
       <button
         type="button"
         onClick={() => setUsuarioModalOpen(true)}
         title="Cambiar o agregar usuario"
-        className="absolute right-4 top-4 flex items-center gap-2 rounded-full bg-white py-2 pl-2 pr-4 text-sm font-medium text-gray-700 shadow hover:bg-gray-50"
+        className="absolute right-4 top-4 flex items-center gap-2 rounded-full bg-white py-2 pl-2 pr-4 text-sm font-medium text-gray-700 shadow hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
       >
-        <IconoUsuario className="h-7 w-7 text-gray-600" />
+        <IconoUsuario className="h-7 w-7 text-gray-600 dark:text-gray-400" />
         <span className="max-w-[10rem] truncate">{usuario?.name ?? "Usuario"}</span>
       </button>
 
-      <div className="w-full max-w-xl rounded-xl bg-white p-8 shadow-lg">
-        <h1 className="text-3xl font-bold text-gray-900">
+      <div className="w-full max-w-xl rounded-xl bg-white p-8 shadow-lg dark:bg-gray-900 dark:shadow-none dark:ring-1 dark:ring-gray-800">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
           Crear reporte
         </h1>
 
-        <p className="mt-2 mb-6 text-gray-500">
+        <p className="mt-2 mb-6 text-gray-500 dark:text-gray-400">
           Complete la información del daño reportado.
         </p>
 
         {usuario && (
-          <p className="-mt-4 mb-6 text-sm text-gray-500">
-            Reportando como <span className="font-medium text-gray-700">{usuario.name}</span>
+          <p className="-mt-4 mb-6 text-sm text-gray-500 dark:text-gray-400">
+            Reportando como{" "}
+            <span className="font-medium text-gray-700 dark:text-gray-300">{usuario.name}</span>
           </p>
         )}
 
         {usuarioError && (
-          <p className="-mt-4 mb-6 text-sm text-amber-700">{usuarioError}</p>
+          <p className="-mt-4 mb-6 text-sm text-amber-700 dark:text-amber-400">{usuarioError}</p>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
 
           {catalogError && (
-            <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+            <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
               {catalogError}
             </p>
           )}
 
           {/* Categoría */}
           <div>
-            <label className="mb-1 block font-medium text-gray-700">
+            <label className="mb-1 block font-medium text-gray-700 dark:text-gray-300">
               Categoría
             </label>
 
@@ -334,7 +335,7 @@ export default function Home() {
               onChange={handleCategoryChange}
               required
               disabled={loadingCatalog || categories.length === 0}
-              className="w-full rounded-lg border border-gray-300 p-3 text-gray-900 disabled:bg-gray-100"
+              className="w-full rounded-lg border border-gray-300 p-3 text-gray-900 disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:disabled:bg-gray-800"
             >
               <option value="">
                 {loadingCatalog ? "Cargando categorías..." : "Seleccione una categoría"}
@@ -352,7 +353,7 @@ export default function Home() {
 
           {/* Tipo de reporte (depende de la categoría) */}
           <div>
-            <label className="mb-1 block font-medium text-gray-700">
+            <label className="mb-1 block font-medium text-gray-700 dark:text-gray-300">
               Tipo de reporte
             </label>
 
@@ -362,7 +363,7 @@ export default function Home() {
               onChange={handleChange}
               required
               disabled={!selectedCategory}
-              className="w-full rounded-lg border border-gray-300 p-3 text-gray-900 disabled:bg-gray-100"
+              className="w-full rounded-lg border border-gray-300 p-3 text-gray-900 disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:disabled:bg-gray-800"
             >
               <option value="">
                 {selectedCategory ? "Seleccione un tipo de reporte" : "Primero seleccione una categoría"}
@@ -380,7 +381,7 @@ export default function Home() {
 
           {/* Descripción */}
           <div>
-            <label className="mb-1 block font-medium text-gray-700">
+            <label className="mb-1 block font-medium text-gray-700 dark:text-gray-300">
               Descripción
             </label>
 
@@ -391,13 +392,13 @@ export default function Home() {
               required
               rows={4}
               placeholder="Describa el daño..."
-              className="w-full rounded-lg border border-gray-300 p-3 text-gray-900"
+              className="w-full rounded-lg border border-gray-300 p-3 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
             />
           </div>
 
           {/* Ubicación: en el mapa o con el GPS del dispositivo */}
           <div>
-            <p className="mb-2 font-medium text-gray-700">
+            <p className="mb-2 font-medium text-gray-700 dark:text-gray-300">
               Ubicación
             </p>
 
@@ -405,7 +406,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setMapOpen(true)}
-                className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 font-medium text-gray-800 hover:bg-gray-50"
+                className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 font-medium text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
               >
                 <IconoMapa />
                 Seleccionar en el mapa
@@ -415,7 +416,7 @@ export default function Home() {
                 type="button"
                 onClick={locateWithGps}
                 disabled={locatingGps}
-                className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 font-medium text-gray-800 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-500"
+                className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 font-medium text-gray-800 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-500 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800 dark:disabled:bg-gray-800 dark:disabled:text-gray-500"
               >
                 <IconoUbicacion className={`h-5 w-5 ${locatingGps ? "animate-pulse" : ""}`} />
                 {locatingGps ? "Obteniendo ubicación..." : "Usar mi ubicación"}
@@ -423,21 +424,26 @@ export default function Home() {
             </div>
 
             {location ? (
-              <p className="mt-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
+              <p className="mt-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                 <span className="font-medium">
                   {location.origen === "gps" ? "Ubicación del dispositivo" : "Punto seleccionado en el mapa"}:
                 </span>{" "}
                 <span className="font-mono">{formatearCoordenada(location)}</span>
                 {location.precisionMetros !== undefined && (
-                  <span className="text-gray-500"> (precisión ±{Math.round(location.precisionMetros)} m)</span>
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {" "}
+                    (precisión ±{Math.round(location.precisionMetros)} m)
+                  </span>
                 )}
               </p>
             ) : (
-              <p className="mt-3 text-sm text-gray-500">Aún no se ha indicado la ubicación.</p>
+              <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+                Aún no se ha indicado la ubicación.
+              </p>
             )}
 
             {locationError && (
-              <p role="alert" className="mt-2 text-sm text-red-600">
+              <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
                 {locationError}
               </p>
             )}
@@ -445,7 +451,7 @@ export default function Home() {
 
           {/* Imagen: desde la cámara o la galería del dispositivo */}
           <div>
-            <p className="mb-2 font-medium text-gray-700">
+            <p className="mb-2 font-medium text-gray-700 dark:text-gray-300">
               Imagen
             </p>
 
@@ -470,18 +476,30 @@ export default function Home() {
             />
 
             {image && imagePreview ? (
-              <div className="flex items-center gap-4 rounded-lg border border-gray-200 p-3">
+              <div className="flex items-center gap-4 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
                 {/* eslint-disable-next-line @next/next/no-img-element -- vista previa local (blob:) */}
                 <img src={imagePreview} alt="Vista previa de la imagen" className="h-20 w-20 rounded-md object-cover" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-gray-800">{image.name}</p>
-                  <p className="text-sm text-gray-500">{formatearTamano(image.size)}</p>
+                  <p className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">
+                    {image.name}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {formatearTamano(image.size)}
+                  </p>
                 </div>
                 <div className="flex flex-col gap-1 text-sm">
-                  <button type="button" onClick={() => imageInputRef.current?.click()} className="font-medium text-gray-700 hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    className="font-medium text-gray-700 hover:underline dark:text-gray-300"
+                  >
                     Cambiar
                   </button>
-                  <button type="button" onClick={removeImage} className="font-medium text-red-600 hover:underline">
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="font-medium text-red-600 hover:underline dark:text-red-400"
+                  >
                     Quitar
                   </button>
                 </div>
@@ -491,7 +509,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
-                  className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-400 px-4 py-6 font-medium text-gray-700 hover:bg-gray-50"
+                  className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-400 px-4 py-6 font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
                 >
                   <IconoCamara />
                   Activar cámara
@@ -499,17 +517,19 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => imageInputRef.current?.click()}
-                  className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-400 px-4 py-6 font-medium text-gray-700 hover:bg-gray-50"
+                  className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-400 px-4 py-6 font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
                 >
                   Elegir de la galería
                 </button>
               </div>
             )}
 
-            <p className="mt-2 text-xs text-gray-500">JPEG, PNG o WebP, hasta 10 MB.</p>
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              JPEG, PNG o WebP, hasta 10 MB.
+            </p>
 
             {imageError && (
-              <p role="alert" className="mt-2 text-sm text-red-600">
+              <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
                 {imageError}
               </p>
             )}
@@ -519,14 +539,14 @@ export default function Home() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-lg bg-black py-3 font-medium text-white hover:bg-gray-800 disabled:bg-gray-400"
+            className="w-full rounded-lg bg-black py-3 font-medium text-white hover:bg-gray-800 disabled:bg-gray-400 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 dark:disabled:bg-gray-600 dark:disabled:text-gray-300"
           >
             {submitting ? "Enviando..." : "Enviar reporte"}
           </button>
         </form>
 
         {submitError && (
-          <p role="alert" className="mt-5 font-medium text-red-600">
+          <p role="alert" className="mt-5 font-medium text-red-600 dark:text-red-400">
             {submitError}
           </p>
         )}

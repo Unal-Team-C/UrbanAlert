@@ -24,14 +24,17 @@ export default function DetalleReportePage({ params }: PageProps<"/historial/[id
 
   return (
     <main className="mx-auto w-full max-w-4xl space-y-6 p-6">
-      <Link href="/historial" className="text-sm text-blue-600 hover:underline">
+      <Link
+        href="/historial"
+        className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+      >
         ← Volver al histórico
       </Link>
 
       {reporte.cargando ? (
         <Cargando texto="Cargando reporte..." />
       ) : reporte.error?.status === 404 ? (
-        <p role="alert" className="py-8 text-center text-gray-700">
+        <p role="alert" className="py-8 text-center text-gray-700 dark:text-gray-300">
           Reporte no encontrado.
         </p>
       ) : reporte.error ? (

@@ -22,9 +22,9 @@ export default function TablaReportes({
 
   return (
     <div>
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
         <table className="w-full text-left text-sm">
-          <thead className="bg-gray-50 text-gray-600">
+          <thead className="bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
             <tr>
               <th className="p-3">Fecha</th>
               <th className="p-3">Categoría / tipo</th>
@@ -36,11 +36,13 @@ export default function TablaReportes({
           </thead>
           <tbody>
             {datos.elementos.map((reporte) => (
-              <tr key={reporte.id} className="border-t border-gray-100">
+              <tr key={reporte.id} className="border-t border-gray-100 dark:border-gray-800">
                 <td className="p-3 whitespace-nowrap">{formatearFecha(reporte.fecha)}</td>
                 <td className="p-3">
                   <span className="block font-medium">{nombreTipo(catalogo, reporte.tipo)}</span>
-                  <span className="text-gray-500">{nombreCategoria(catalogo, reporte.categoria)}</span>
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {nombreCategoria(catalogo, reporte.categoria)}
+                  </span>
                 </td>
                 <td className="max-w-xs truncate p-3" title={reporte.descripcion}>
                   {reporte.descripcion}
@@ -48,7 +50,10 @@ export default function TablaReportes({
                 <td className="p-3">{nombreEstado(reporte.estado)}</td>
                 <td className="p-3">{nombreNivel(reporte.nivelEmergencia)}</td>
                 <td className="p-3">
-                  <Link href={`/historial/${reporte.id}`} className="text-blue-600 hover:underline">
+                  <Link
+                    href={`/historial/${reporte.id}`}
+                    className="text-blue-600 hover:underline dark:text-blue-400"
+                  >
                     Ver detalle
                   </Link>
                 </td>
@@ -59,7 +64,7 @@ export default function TablaReportes({
       </div>
 
       <nav aria-label="Paginación" className="mt-3 flex items-center justify-between text-sm">
-        <span className="text-gray-600">
+        <span className="text-gray-600 dark:text-gray-400">
           Página {datos.pagina} de {totalPaginas} · {datos.totalElementos} reportes
         </span>
         <div className="flex gap-2">
@@ -67,7 +72,7 @@ export default function TablaReportes({
             type="button"
             disabled={datos.pagina <= 1}
             onClick={() => onPagina(datos.pagina - 1)}
-            className="rounded-md border border-gray-300 bg-white px-3 py-1 disabled:opacity-40"
+            className="rounded-md border border-gray-300 bg-white px-3 py-1 disabled:opacity-40 dark:border-gray-700 dark:bg-gray-900"
           >
             Anterior
           </button>
@@ -75,7 +80,7 @@ export default function TablaReportes({
             type="button"
             disabled={datos.pagina >= totalPaginas}
             onClick={() => onPagina(datos.pagina + 1)}
-            className="rounded-md border border-gray-300 bg-white px-3 py-1 disabled:opacity-40"
+            className="rounded-md border border-gray-300 bg-white px-3 py-1 disabled:opacity-40 dark:border-gray-700 dark:bg-gray-900"
           >
             Siguiente
           </button>

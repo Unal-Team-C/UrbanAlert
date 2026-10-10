@@ -9,7 +9,7 @@ import { dentroDeBogota, formatearCoordenada, type Coordenada } from "../lib/ubi
 const MapaSelector = dynamic(() => import("./MapaSelector"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full items-center justify-center text-sm text-gray-500">
+    <div className="flex h-full items-center justify-center text-sm text-gray-500 dark:text-gray-400">
       Cargando mapa...
     </div>
   ),
@@ -43,13 +43,13 @@ export default function SeleccionUbicacionModal({ inicial, onGuardar, onCerrar }
         role="dialog"
         aria-modal="true"
         aria-labelledby="seleccion-ubicacion-titulo"
-        className="flex h-[85vh] w-full max-w-3xl flex-col rounded-xl bg-white shadow-xl"
+        className="flex h-[85vh] w-full max-w-3xl flex-col rounded-xl bg-white shadow-xl dark:bg-gray-900 dark:shadow-none dark:ring-1 dark:ring-gray-800"
       >
-        <div className="border-b border-gray-200 p-4">
-          <h2 id="seleccion-ubicacion-titulo" className="text-lg font-bold text-gray-900">
+        <div className="border-b border-gray-200 p-4 dark:border-gray-800">
+          <h2 id="seleccion-ubicacion-titulo" className="text-lg font-bold text-gray-900 dark:text-gray-100">
             Seleccione la ubicación
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Haga clic en el mapa sobre el lugar del reporte.
           </p>
         </div>
@@ -58,8 +58,12 @@ export default function SeleccionUbicacionModal({ inicial, onGuardar, onCerrar }
           <MapaSelector value={seleccion} onChange={setSeleccion} />
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className={`text-sm ${fueraDeBogota ? "text-red-600" : "text-gray-600"}`}>
+        <div className="flex flex-col gap-3 border-t border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
+          <p
+            className={`text-sm ${
+              fueraDeBogota ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
+            }`}
+          >
             {seleccion === null
               ? "Ningún punto seleccionado."
               : fueraDeBogota
@@ -71,7 +75,7 @@ export default function SeleccionUbicacionModal({ inicial, onGuardar, onCerrar }
             <button
               type="button"
               onClick={onCerrar}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50 sm:flex-none"
+              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50 sm:flex-none dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
             >
               Cancelar
             </button>
@@ -79,7 +83,7 @@ export default function SeleccionUbicacionModal({ inicial, onGuardar, onCerrar }
               type="button"
               disabled={seleccion === null || fueraDeBogota}
               onClick={() => seleccion && onGuardar(seleccion)}
-              className="flex-1 rounded-lg bg-black px-4 py-2 font-medium text-white hover:bg-gray-800 disabled:bg-gray-400 sm:flex-none"
+              className="flex-1 rounded-lg bg-black px-4 py-2 font-medium text-white hover:bg-gray-800 disabled:bg-gray-400 sm:flex-none dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 dark:disabled:bg-gray-600 dark:disabled:text-gray-300"
             >
               Guardar ubicación
             </button>
