@@ -16,11 +16,12 @@ x-multimedia-env: &multimedia-env
   S3_ADDRESSING_STYLE: path
   # El gateway expone el bucket en /urbanalert-images/ (location de solo lectura hacia MinIO),
   # así el navegador ve las imágenes sin pasar por la función ni conocer la red de Docker.
-  # GATEWAY_PUBLIC_URL por defecto asume que quien abre el navegador está en la misma máquina
-  # que corre el compose. Con túnel de Cloudflare o dominio propio, fijar GATEWAY_PUBLIC_URL en
-  # el .env a esa URL pública (p. ej. https://urbanalert.midominio.com); GATEWAY_PORT no sirve
-  # para esto, el túnel no pasa por el puerto publicado en el host.
-  PUBLIC_IMAGE_BASE_URL: ${GATEWAY_PUBLIC_URL:-http://localhost:8080}/${MULTIMEDIA_S3_BUCKET:-urbanalert-images}
+  # Ruta relativa (sin esquema ni host): el frontend y las imágenes quedan detrás del mismo
+  # gateway, así que el navegador la resuelve contra el origen con el que abrió la página
+  # (localhost:8080, el dominio del túnel, o cualquier otro) sin depender de configurar su URL
+  # pública. Solo en la nube, con un CDN en un dominio distinto al de la API, haría falta una
+  # URL absoluta aquí (el dominio del CDN).
+  PUBLIC_IMAGE_BASE_URL: /${MULTIMEDIA_S3_BUCKET:-urbanalert-images}
   MONGODB_URI: mongodb://${MULTIMEDIA_DB_USER:-urbanalert}:${MULTIMEDIA_DB_PASSWORD:-urbanalert-dev-secret}@mongo:27017/?authSource=admin
   MONGODB_DATABASE: multimedia
 
