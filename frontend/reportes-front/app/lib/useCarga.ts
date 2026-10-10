@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { esAbortError } from "../lib/api";
+import { esAbortError } from "./api";
 
 type Resultado<T> = { clave: string; datos?: T; error?: { status: number; message: string } };
 
